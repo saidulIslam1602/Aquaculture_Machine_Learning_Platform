@@ -42,10 +42,10 @@ target_metadata = Base.metadata
 def get_url():
     """
     Get Database URL
-    
+
     Returns database URL from environment variable or config.
     Prioritizes environment variable for security.
-    
+
     Returns:
         str: Database connection URL
     """
@@ -55,10 +55,10 @@ def get_url():
 def run_migrations_offline() -> None:
     """
     Run Migrations in 'Offline' Mode
-    
+
     Generates SQL scripts without connecting to database.
     Useful for generating migration SQL for review.
-    
+
     Note:
         This configures the context with just a URL
         and not an Engine, though an Engine is acceptable
@@ -82,10 +82,10 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """
     Run Migrations in 'Online' Mode
-    
+
     Creates an Engine and associates a connection with the context.
     Executes migrations directly against the database.
-    
+
     Note:
         This is the standard mode for running migrations.
         Requires active database connection.
