@@ -9,8 +9,19 @@ import logging
 from .core.config import settings
 from .core.database import init_db
 from .core.redis_client import close_redis
-from .routes import auth, health
+from .routes import auth, health, tasks
 from .routes.ml import inference as ml_inference
+from .middleware.error_handlers import (
+    api_exception_handler,
+    validation_exception_handler,
+    database_exception_handler,
+    generic_exception_handler,
+    APIException,
+)
+from .middleware.logging_middleware import RequestLoggingMiddleware
+from .middleware.rate_limiter import RateLimitMiddleware
+from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import SQLAlchemyError
 
 # Configure logging
 logging.basicConfig(
@@ -37,8 +48,17 @@ app.add_middleware(
     allow_headers=settings.CORS_ALLOW_HEADERS,
 )
 
-# Add GZip middleware for response compression
-app.add_middleware(GZipMiddleware, minimum_size=1000)
+# Add custom middleware (order matters - first added = outermost)
+app.add_middleware(RequestLoggingMiddleware)  # Log all requests
+if settings.RATE_LIMIT_PER_MINUTE > 0:
+    app.add_middleware(RateLimitMiddleware)  # Rate limiting
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # Response compression
+
+# Register exception handlers
+app.add_exception_handler(APIException, api_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(SQLAlchemyError, database_exception_handler)
+app.add_exception_handler(Exception, generic_exception_handler)
 
 # Setup Prometheus metrics
 if settings.PROMETHEUS_ENABLED:
@@ -48,6 +68,7 @@ if settings.PROMETHEUS_ENABLED:
 app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ml_inference.router, prefix=settings.API_V1_PREFIX)
+app.include_router(tasks.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
