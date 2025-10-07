@@ -2,6 +2,64 @@
 
 A production-grade machine learning platform for real-time fish classification and health monitoring in aquaculture environments.
 
+## 🎯 Project Focus: Data Engineering & Infrastructure
+
+This project demonstrates **production-grade data engineering and platform infrastructure** for ML deployment at scale - the core skills required for a Senior ML/Data Engineer role.
+
+### What's Implemented (Production-Ready) ✅
+
+**Infrastructure & Orchestration:**
+- Kubernetes with HPA, network policies, and service mesh ready
+- Docker multi-stage builds with security best practices
+- Terraform infrastructure as code for AWS (EKS, RDS, MSK, S3)
+- NGINX ingress with TLS termination and rate limiting
+
+**Data Engineering:**
+- Real-time streaming with Kafka and consumer groups
+- Distributed task processing with Celery workers
+- PostgreSQL with optimized schema, indexes, and migrations
+- Redis for caching and distributed rate limiting
+- Data pipeline architecture ready for ETL workflows
+
+**API & Security:**
+- FastAPI with JWT authentication and RBAC
+- Request validation with Pydantic
+- Rate limiting with token bucket algorithm
+- Comprehensive error handling and logging
+- API versioning and OpenAPI documentation
+
+**Observability & Monitoring:**
+- Prometheus for metrics collection
+- Grafana dashboards for visualization
+- Real-time performance tracking (p50, p95, p99)
+- Structured JSON logging
+- Health checks and alerting rules
+
+**DevOps & Automation:**
+- GitHub Actions CI/CD with multi-stage pipeline
+- Automated testing (unit, integration, load)
+- Security scanning with Trivy
+- Blue-green deployment support
+- Database migrations with Alembic
+
+**Frontend:**
+- React 18 + TypeScript 5 dashboard
+- Material-UI for professional design
+- Real-time metrics visualization
+- Responsive and accessible UI
+
+### ML Integration Points (Architecture Ready) 🔧
+
+The following components are structured and ready for ML model deployment:
+- ML inference endpoints defined with proper request/response schemas
+- Model manager with versioning, caching, and health monitoring
+- Inference engine with batching and optimization support
+- Integration points marked with TODOs for clarity
+
+**This showcases data engineering and platform capabilities required for deploying ML at scale in production environments.**
+
+---
+
 ## 🎯 Features
 
 - **Real-time Fish Classification**: Process underwater camera feeds with low latency
