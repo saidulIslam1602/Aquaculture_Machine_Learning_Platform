@@ -189,6 +189,22 @@ services:
       - aquaculture-network
     restart: unless-stopped
 
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.frontend
+    container_name: aquaculture-frontend
+    depends_on:
+      - api
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - aquaculture-network
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

@@ -16,7 +16,7 @@ from .middleware.error_handlers import (
     validation_exception_handler,
     database_exception_handler,
     generic_exception_handler,
-    APIException,
+    APIException
 )
 from .middleware.logging_middleware import RequestLoggingMiddleware
 from .middleware.rate_limiter import RateLimitMiddleware
