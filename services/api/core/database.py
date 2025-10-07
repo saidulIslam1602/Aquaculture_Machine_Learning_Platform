@@ -10,7 +10,7 @@ Industry Standards:
     - Dependency injection for FastAPI
     - Declarative base for ORM models
     - Pool pre-ping for connection health checks
-    
+
 Architecture:
     - Engine: Database connection pool manager
     - SessionLocal: Session factory for creating DB sessions
@@ -33,9 +33,7 @@ engine = create_engine(
     pool_pre_ping=True,  # Verify connection health before using (prevents stale connections)
     echo=settings.DEBUG,  # Log all SQL statements when DEBUG=True
     pool_recycle=3600,  # Recycle connections after 1 hour to prevent timeout issues
-    connect_args={
-        "options": "-c timezone=utc"  # Set timezone to UTC for consistency
-    }
+    connect_args={"options": "-c timezone=utc"},  # Set timezone to UTC for consistency
 )
 
 # Session Factory
@@ -46,7 +44,7 @@ SessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=engine,
-    expire_on_commit=False  # Prevent expired object errors after commit
+    expire_on_commit=False,  # Prevent expired object errors after commit
 )
 
 # Declarative Base
@@ -58,25 +56,25 @@ Base = declarative_base()
 def get_db() -> Generator[Session, None, None]:
     """
     Database Session Dependency (Dependency Injection Pattern)
-    
+
     Provides a database session for FastAPI route handlers.
     Automatically handles session lifecycle: creation, usage, and cleanup.
-    
+
     Yields:
         Session: SQLAlchemy database session
-        
+
     Example:
         ```python
         @app.get("/users")
         def get_users(db: Session = Depends(get_db)):
             return db.query(User).all()
         ```
-    
+
     Note:
         - Session is automatically closed after request completion
         - Exceptions trigger automatic rollback
         - Use with FastAPI's Depends() for dependency injection
-        
+
     Best Practices:
         - Always use this dependency instead of creating sessions manually
         - Never store sessions in global variables
@@ -97,22 +95,22 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     """
     Initialize Database Schema
-    
+
     Creates all tables defined in SQLAlchemy models.
     Should be called on application startup.
-    
+
     Note:
         - Only creates tables that don't exist
         - Does not handle migrations (use Alembic for that)
         - Safe to call multiple times (idempotent)
-        
+
     Example:
         ```python
         @app.on_event("startup")
         async def startup():
             init_db()
         ```
-    
+
     Warning:
         In production, use Alembic migrations instead of this function.
         This is primarily for development and testing.

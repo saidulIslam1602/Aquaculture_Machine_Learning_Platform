@@ -14,7 +14,7 @@ router = APIRouter(tags=["health"])
 async def health_check():
     """
     Basic health check endpoint.
-    
+
     Returns:
         Health status
     """
@@ -22,7 +22,7 @@ async def health_check():
         "status": "healthy",
         "service": "api",
         "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT
+        "environment": settings.ENVIRONMENT,
     }
 
 
@@ -30,10 +30,10 @@ async def health_check():
 async def detailed_health_check(db: Session = Depends(get_db)):
     """
     Detailed health check with dependency status.
-    
+
     Args:
         db: Database session
-        
+
     Returns:
         Detailed health status
     """
@@ -42,9 +42,9 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         "service": "api",
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
-        "checks": {}
+        "checks": {},
     }
-    
+
     # Check database
     try:
         db.execute(text("SELECT 1"))
@@ -52,7 +52,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     except Exception as e:
         health_status["checks"]["database"] = f"unhealthy: {str(e)}"
         health_status["status"] = "degraded"
-    
+
     # Check Redis
     try:
         redis = await get_redis()
@@ -61,7 +61,7 @@ async def detailed_health_check(db: Session = Depends(get_db)):
     except Exception as e:
         health_status["checks"]["redis"] = f"unhealthy: {str(e)}"
         health_status["status"] = "degraded"
-    
+
     return health_status
 
 
@@ -69,10 +69,10 @@ async def detailed_health_check(db: Session = Depends(get_db)):
 async def readiness_check(db: Session = Depends(get_db)):
     """
     Kubernetes readiness probe.
-    
+
     Args:
         db: Database session
-        
+
     Returns:
         Readiness status
     """
@@ -87,7 +87,7 @@ async def readiness_check(db: Session = Depends(get_db)):
 async def liveness_check():
     """
     Kubernetes liveness probe.
-    
+
     Returns:
         Liveness status
     """

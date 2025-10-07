@@ -11,7 +11,7 @@ redis_client: Optional[redis.Redis] = None
 async def get_redis() -> redis.Redis:
     """
     Get Redis client instance.
-    
+
     Returns:
         Redis client
     """
