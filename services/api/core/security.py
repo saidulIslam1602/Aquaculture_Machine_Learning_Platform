@@ -44,7 +44,8 @@ pwd_context = CryptContext(
 # Implements RFC 6750 Bearer Token Usage
 # Expects: Authorization: Bearer <token>
 security = HTTPBearer(
-    scheme_name="JWT Bearer Token", description="Enter JWT token obtained from /api/v1/auth/login"
+    scheme_name="JWT Bearer Token",
+    description="Enter JWT token obtained from /api/v1/auth/login",
 )
 
 
@@ -116,7 +117,9 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    data: Dict[str, Any], expires_delta: Optional[timedelta] = None
+) -> str:
     """
     Create JWT Access Token (RFC 7519)
 
@@ -158,7 +161,9 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.utcnow() + timedelta(
+            minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
 
     # Add standard JWT claims
     to_encode.update(
@@ -170,7 +175,9 @@ def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta]
     )
 
     # Encode and sign token
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    encoded_jwt = jwt.encode(
+        to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM
+    )
 
     return encoded_jwt
 
@@ -210,7 +217,9 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     """
     try:
         # Decode and verify token
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(
+            token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
+        )
         return payload
     except JWTError as e:
         # Token is invalid, expired, or tampered

@@ -174,8 +174,12 @@ class InferenceEngine:
         """
         return A.Compose(
             [
-                A.Resize(height=ml_settings.IMAGE_SIZE[0], width=ml_settings.IMAGE_SIZE[1]),
-                A.Normalize(mean=ml_settings.NORMALIZE_MEAN, std=ml_settings.NORMALIZE_STD),
+                A.Resize(
+                    height=ml_settings.IMAGE_SIZE[0], width=ml_settings.IMAGE_SIZE[1]
+                ),
+                A.Normalize(
+                    mean=ml_settings.NORMALIZE_MEAN, std=ml_settings.NORMALIZE_STD
+                ),
                 ToTensorV2(),
             ]
         )
@@ -273,7 +277,9 @@ class InferenceEngine:
         return results
 
     @torch.no_grad()
-    def predict(self, image: Image.Image, model_version: Optional[str] = None) -> Dict[str, Any]:
+    def predict(
+        self, image: Image.Image, model_version: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Predict Single Image
 

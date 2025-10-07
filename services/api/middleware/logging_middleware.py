@@ -87,7 +87,9 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         }
 
         # Log request
-        logger.info(f"Request started: {request.method} {request.url.path}", extra=request_info)
+        logger.info(
+            f"Request started: {request.method} {request.url.path}", extra=request_info
+        )
 
         # Process request
         try:

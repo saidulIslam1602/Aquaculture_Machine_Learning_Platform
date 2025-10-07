@@ -44,7 +44,9 @@ class FishSpecies(Base):
     optimal_temperature_min = Column(Numeric(5, 2))
     optimal_temperature_max = Column(Numeric(5, 2))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     # Relationships
     predictions = relationship("Prediction", back_populates="species")

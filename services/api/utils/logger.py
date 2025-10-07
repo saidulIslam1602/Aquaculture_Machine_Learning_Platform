@@ -33,7 +33,10 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
     """
 
     def add_fields(
-        self, log_record: Dict[str, Any], record: logging.LogRecord, message_dict: Dict[str, Any]
+        self,
+        log_record: Dict[str, Any],
+        record: logging.LogRecord,
+        message_dict: Dict[str, Any],
     ) -> None:
         """
         Add Custom Fields to Log Record
@@ -95,7 +98,8 @@ def setup_logging() -> None:
         formatter = CustomJsonFormatter("%(timestamp)s %(level)s %(name)s %(message)s")
     else:
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
         )
 
     console_handler.setFormatter(formatter)
@@ -107,7 +111,8 @@ def setup_logging() -> None:
     logging.getLogger("celery").setLevel(logging.INFO)
 
     logging.info(
-        f"Logging configured: level={settings.LOG_LEVEL}, " f"environment={settings.ENVIRONMENT}"
+        f"Logging configured: level={settings.LOG_LEVEL}, "
+        f"environment={settings.ENVIRONMENT}"
     )
 
 

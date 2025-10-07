@@ -21,7 +21,15 @@ Endpoints:
     GET /api/v1/ml/models/{version} - Get model details
 """
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, status, Depends, BackgroundTasks
+from fastapi import (
+    APIRouter,
+    File,
+    UploadFile,
+    HTTPException,
+    status,
+    Depends,
+    BackgroundTasks,
+)
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, validator
@@ -41,7 +49,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/ml",
     tags=["Machine Learning"],
-    responses={404: {"description": "Not found"}, 500: {"description": "Internal server error"}},
+    responses={
+        404: {"description": "Not found"},
+        500: {"description": "Internal server error"},
+    },
 )
 
 
@@ -67,13 +78,17 @@ class PredictionRequest(BaseModel):
         }
     """
 
-    image_base64: str = Field(..., description="Base64-encoded image data", min_length=100)
+    image_base64: str = Field(
+        ..., description="Base64-encoded image data", min_length=100
+    )
     model_version: Optional[str] = Field(
         None,
         description="Model version to use (defaults to active version)",
         regex=r"^v\d+\.\d+\.\d+$",
     )
-    return_probabilities: bool = Field(False, description="Return probabilities for all classes")
+    return_probabilities: bool = Field(
+        False, description="Return probabilities for all classes"
+    )
 
     @validator("image_base64")
     def validate_base64(cls, v):
@@ -290,7 +305,8 @@ async def predict_image(
 
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid image data: {str(e)}"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid image data: {str(e)}",
         )
     except Exception as e:
         logger.error(f"Prediction failed: {e}", exc_info=True)
@@ -383,7 +399,8 @@ async def predict_image_async(
     response_description="Task information for batch processing",
 )
 async def predict_batch(
-    request: BatchPredictionRequest, current_user: Dict[str, Any] = Depends(get_current_active_user)
+    request: BatchPredictionRequest,
+    current_user: Dict[str, Any] = Depends(get_current_active_user),
 ) -> AsyncPredictionResponse:
     """
     Batch Predict Fish Species
@@ -413,7 +430,8 @@ async def predict_batch(
         # Validate batch size
         if num_images > 100:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Maximum 100 images per batch"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum 100 images per batch",
             )
 
         # TODO: Submit to Celery
@@ -422,7 +440,9 @@ async def predict_batch(
 
         task_id = "b2c3d4e5-f6g7-8901-bcde-fg2345678901"
 
-        logger.info(f"Batch prediction queued: " f"task_id={task_id}, images={num_images}")
+        logger.info(
+            f"Batch prediction queued: " f"task_id={task_id}, images={num_images}"
+        )
 
         return AsyncPredictionResponse(
             task_id=task_id,
@@ -523,7 +543,8 @@ async def get_model_info(
     # Mock response
     if version != "v1.0.0":
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=f"Model version {version} not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model version {version} not found",
         )
 
     return ModelInfo(

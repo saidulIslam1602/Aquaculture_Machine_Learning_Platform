@@ -149,7 +149,9 @@ class ModelManager:
             logger.info(
                 f"CUDA memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB"
             )
-        elif ml_settings.INFERENCE_DEVICE == "mps" and torch.backends.mps.is_available():
+        elif (
+            ml_settings.INFERENCE_DEVICE == "mps" and torch.backends.mps.is_available()
+        ):
             device = torch.device("mps")
             logger.info("Using Apple Silicon MPS device")
         else:
@@ -298,7 +300,9 @@ class ModelManager:
                 logger.error(f"Failed to load model {version}: {e}")
                 raise RuntimeError(f"Model loading failed: {e}")
 
-    def _create_model_architecture(self, architecture: str, num_classes: int) -> nn.Module:
+    def _create_model_architecture(
+        self, architecture: str, num_classes: int
+    ) -> nn.Module:
         """
         Create Model Architecture
 
@@ -328,7 +332,9 @@ class ModelManager:
             model.fc = nn.Linear(model.fc.in_features, num_classes)
         elif architecture == "efficientnet_b0":
             model = models.efficientnet_b0(pretrained=False)
-            model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
+            model.classifier[1] = nn.Linear(
+                model.classifier[1].in_features, num_classes
+            )
         else:
             raise ValueError(f"Unsupported architecture: {architecture}")
 
@@ -353,7 +359,11 @@ class ModelManager:
 
         with torch.no_grad():
             dummy_input = torch.randn(
-                1, 3, ml_settings.IMAGE_SIZE[0], ml_settings.IMAGE_SIZE[1], device=self.device
+                1,
+                3,
+                ml_settings.IMAGE_SIZE[0],
+                ml_settings.IMAGE_SIZE[1],
+                device=self.device,
             )
 
             if ml_settings.ENABLE_MIXED_PRECISION:

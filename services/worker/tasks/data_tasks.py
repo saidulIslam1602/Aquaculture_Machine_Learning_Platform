@@ -23,7 +23,9 @@ from ..celery_app import celery_app
 logger = get_task_logger(__name__)
 
 
-@celery_app.task(name="services.worker.tasks.data_tasks.cleanup_expired_results", bind=True)
+@celery_app.task(
+    name="services.worker.tasks.data_tasks.cleanup_expired_results", bind=True
+)
 def cleanup_expired_results(self) -> Dict[str, Any]:
     """
     Cleanup Expired Task Results
@@ -126,7 +128,9 @@ def worker_health_check(self) -> Dict[str, Any]:
 
 
 @celery_app.task(
-    name="services.worker.tasks.data_tasks.aggregate_predictions", bind=True, time_limit=1800
+    name="services.worker.tasks.data_tasks.aggregate_predictions",
+    bind=True,
+    time_limit=1800,
 )
 def aggregate_predictions(self, start_date: str, end_date: str) -> Dict[str, Any]:
     """
@@ -181,9 +185,13 @@ def aggregate_predictions(self, start_date: str, end_date: str) -> Dict[str, Any
 
 
 @celery_app.task(
-    name="services.worker.tasks.data_tasks.export_predictions", bind=True, time_limit=3600
+    name="services.worker.tasks.data_tasks.export_predictions",
+    bind=True,
+    time_limit=3600,
 )
-def export_predictions(self, start_date: str, end_date: str, format: str = "csv") -> Dict[str, Any]:
+def export_predictions(
+    self, start_date: str, end_date: str, format: str = "csv"
+) -> Dict[str, Any]:
     """
     Export Predictions to File
 
@@ -232,7 +240,9 @@ def export_predictions(self, start_date: str, end_date: str, format: str = "csv"
         raise
 
 
-@celery_app.task(name="services.worker.tasks.data_tasks.cleanup_old_predictions", bind=True)
+@celery_app.task(
+    name="services.worker.tasks.data_tasks.cleanup_old_predictions", bind=True
+)
 def cleanup_old_predictions(self, days_to_keep: int = 90) -> Dict[str, Any]:
     """
     Cleanup Old Predictions

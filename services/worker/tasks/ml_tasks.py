@@ -79,7 +79,11 @@ class MLTask(Task):
             kwargs: Task keyword arguments
             einfo: Exception info
         """
-        logger.error(f"Task {self.name} failed: {exc}", exc_info=einfo, extra={"task_id": task_id})
+        logger.error(
+            f"Task {self.name} failed: {exc}",
+            exc_info=einfo,
+            extra={"task_id": task_id},
+        )
         super().on_failure(exc, task_id, args, kwargs, einfo)
 
 
@@ -94,7 +98,10 @@ class MLTask(Task):
     retry_jitter=True,
 )
 def predict_image(
-    self, image_data: str, model_version: Optional[str] = None, return_probabilities: bool = False
+    self,
+    image_data: str,
+    model_version: Optional[str] = None,
+    return_probabilities: bool = False,
 ) -> Dict[str, Any]:
     """
     Predict Single Image (Async Task)
@@ -169,7 +176,10 @@ def predict_image(
     soft_time_limit=1700,  # 28 minutes soft limit
 )
 def predict_batch(
-    self, image_data_list: List[str], model_version: Optional[str] = None, batch_size: int = 32
+    self,
+    image_data_list: List[str],
+    model_version: Optional[str] = None,
+    batch_size: int = 32,
 ) -> List[Dict[str, Any]]:
     """
     Predict Batch of Images (Async Task)
@@ -204,7 +214,9 @@ def predict_batch(
 
     try:
         # Update task state for progress tracking
-        self.update_state(state="PROCESSING", meta={"current": 0, "total": total_images})
+        self.update_state(
+            state="PROCESSING", meta={"current": 0, "total": total_images}
+        )
 
         # Decode all images
         images = []
@@ -227,14 +239,19 @@ def predict_batch(
             batch = valid_images[i : i + batch_size]
 
             # Perform batch inference
-            batch_results = self.inference_engine.predict_batch(batch, model_version=model_version)
+            batch_results = self.inference_engine.predict_batch(
+                batch, model_version=model_version
+            )
 
             all_results.extend(batch_results)
 
             # Update progress
             self.update_state(
                 state="PROCESSING",
-                meta={"current": min(i + batch_size, len(valid_images)), "total": total_images},
+                meta={
+                    "current": min(i + batch_size, len(valid_images)),
+                    "total": total_images,
+                },
             )
 
         # Add task metadata
@@ -289,7 +306,9 @@ def load_model(self, model_version: str, force_reload: bool = False) -> Dict[str
 
     try:
         # Load model
-        model = self.model_manager.load_model(version=model_version, force_reload=force_reload)
+        model = self.model_manager.load_model(
+            version=model_version, force_reload=force_reload
+        )
 
         # Get metadata
         metadata = self.model_manager.get_metadata(model_version)
@@ -320,7 +339,10 @@ def load_model(self, model_version: str, force_reload: bool = False) -> Dict[str
     soft_time_limit=540,
 )
 def benchmark_model(
-    self, model_version: str, num_samples: int = 100, batch_sizes: List[int] = [1, 8, 16, 32]
+    self,
+    model_version: str,
+    num_samples: int = 100,
+    batch_sizes: List[int] = [1, 8, 16, 32],
 ) -> Dict[str, Any]:
     """
     Benchmark Model Performance (Async Task)
@@ -356,9 +378,15 @@ def benchmark_model(
         model = self.model_manager.get_model(model_version)
 
         # Generate dummy data
-        dummy_images = [Image.new("RGB", (224, 224), color="red") for _ in range(num_samples)]
+        dummy_images = [
+            Image.new("RGB", (224, 224), color="red") for _ in range(num_samples)
+        ]
 
-        results = {"model_version": model_version, "num_samples": num_samples, "batch_results": {}}
+        results = {
+            "model_version": model_version,
+            "num_samples": num_samples,
+            "batch_results": {},
+        }
 
         # Benchmark each batch size
         for batch_size in batch_sizes:
@@ -405,7 +433,9 @@ def benchmark_model(
 
 @celery_app.task(name="services.worker.tasks.ml_tasks.batch_predict_chunked")
 def batch_predict_chunked(
-    image_data_list: List[str], chunk_size: int = 100, model_version: Optional[str] = None
+    image_data_list: List[str],
+    chunk_size: int = 100,
+    model_version: Optional[str] = None,
 ) -> str:
     """
     Batch Predict with Chunking (Chord Pattern)
@@ -433,7 +463,8 @@ def batch_predict_chunked(
     """
     # Split into chunks
     chunks = [
-        image_data_list[i : i + chunk_size] for i in range(0, len(image_data_list), chunk_size)
+        image_data_list[i : i + chunk_size]
+        for i in range(0, len(image_data_list), chunk_size)
     ]
 
     # Create parallel tasks

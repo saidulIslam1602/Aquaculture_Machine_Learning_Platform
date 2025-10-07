@@ -40,7 +40,9 @@ class TaskStatusResponse(BaseModel):
     """
 
     task_id: str = Field(..., description="Unique task ID")
-    status: str = Field(..., description="Task status: PENDING, STARTED, SUCCESS, FAILURE, RETRY")
+    status: str = Field(
+        ..., description="Task status: PENDING, STARTED, SUCCESS, FAILURE, RETRY"
+    )
     result: Optional[Dict[str, Any]] = Field(None, description="Task result")
     progress: Optional[Dict[str, Any]] = Field(None, description="Progress information")
     error: Optional[str] = Field(None, description="Error message if failed")
@@ -178,7 +180,9 @@ async def cancel_task(
         # task = AsyncResult(task_id)
         # task.revoke(terminate=True)
 
-        logger.info(f"Task cancelled: {task_id} by user: {current_user.get('username')}")
+        logger.info(
+            f"Task cancelled: {task_id} by user: {current_user.get('username')}"
+        )
 
     except Exception as e:
         logger.error(f"Failed to cancel task: {e}", exc_info=True)

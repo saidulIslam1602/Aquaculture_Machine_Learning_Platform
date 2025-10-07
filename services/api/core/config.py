@@ -54,7 +54,9 @@ class Settings(BaseSettings):
 
     # Database Configuration
     # PostgreSQL connection settings with connection pooling
-    DATABASE_URL: str = "postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db"
+    DATABASE_URL: str = (
+        "postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db"
+    )
     DATABASE_POOL_SIZE: int = 20  # Max connections in pool
     DATABASE_MAX_OVERFLOW: int = 10  # Additional connections when pool is full
 

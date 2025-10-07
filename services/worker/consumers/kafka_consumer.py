@@ -105,7 +105,9 @@ class FishImageConsumer:
             "max_poll_interval_ms": 300000,  # 5 minutes max processing time
             "session_timeout_ms": session_timeout_ms,  # Session timeout
             "heartbeat_interval_ms": heartbeat_interval_ms,  # Heartbeat frequency
-            "value_deserializer": lambda m: json.loads(m.decode("utf-8")),  # JSON deserializer
+            "value_deserializer": lambda m: json.loads(
+                m.decode("utf-8")
+            ),  # JSON deserializer
             "key_deserializer": lambda m: m.decode("utf-8") if m else None,
             "api_version": (2, 5, 0),  # Kafka API version
             "consumer_timeout_ms": 1000,  # Poll timeout
@@ -139,7 +141,9 @@ class FishImageConsumer:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
-        logger.info(f"FishImageConsumer initialized: " f"group={group_id}, topics={self.topics}")
+        logger.info(
+            f"FishImageConsumer initialized: " f"group={group_id}, topics={self.topics}"
+        )
 
     def _signal_handler(self, signum, frame):
         """
@@ -177,7 +181,8 @@ class FishImageConsumer:
             self.producer = KafkaProducer(**self.producer_config)
 
             logger.info(
-                f"Connected to Kafka: {self.bootstrap_servers}, " f"subscribed to: {self.topics}"
+                f"Connected to Kafka: {self.bootstrap_servers}, "
+                f"subscribed to: {self.topics}"
             )
 
         except KafkaError as e:
@@ -310,7 +315,9 @@ class FishImageConsumer:
 
         try:
             self.publish_result(
-                topic="fish-images-dlq", key=message.get("image_id", "unknown"), value=dlq_message
+                topic="fish-images-dlq",
+                key=message.get("image_id", "unknown"),
+                value=dlq_message,
             )
             logger.warning(f"Message sent to DLQ: {message.get('image_id')}")
         except Exception as e:
@@ -346,7 +353,8 @@ class FishImageConsumer:
                 try:
                     # Poll for messages (batch)
                     message_batch = self.consumer.poll(
-                        timeout_ms=1000, max_records=self.consumer_config["max_poll_records"]
+                        timeout_ms=1000,
+                        max_records=self.consumer_config["max_poll_records"],
                     )
 
                     # Process each partition's messages
@@ -365,7 +373,9 @@ class FishImageConsumer:
 
                                 # Publish result
                                 self.publish_result(
-                                    topic="fish-predictions", key=message.key, value=result
+                                    topic="fish-predictions",
+                                    key=message.key,
+                                    value=result,
                                 )
 
                                 # Update metrics
@@ -374,7 +384,10 @@ class FishImageConsumer:
 
                                 # Log progress periodically
                                 if self.messages_processed % 100 == 0:
-                                    avg_time = self.total_processing_time / self.messages_processed
+                                    avg_time = (
+                                        self.total_processing_time
+                                        / self.messages_processed
+                                    )
                                     logger.info(
                                         f"Processed {self.messages_processed} messages, "
                                         f"avg time: {avg_time*1000:.2f}ms"
@@ -382,7 +395,9 @@ class FishImageConsumer:
 
                             except Exception as e:
                                 # Handle processing error
-                                logger.error(f"Error processing message: {e}", exc_info=True)
+                                logger.error(
+                                    f"Error processing message: {e}", exc_info=True
+                                )
                                 self.messages_failed += 1
 
                                 # Send to DLQ

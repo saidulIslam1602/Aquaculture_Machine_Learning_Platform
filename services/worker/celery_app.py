@@ -69,7 +69,10 @@ celery_app.conf.update(
             "queue": "data_processing",
             "routing_key": "data.processing",
         },
-        "services.worker.tasks.batch_tasks.*": {"queue": "batch_jobs", "routing_key": "batch.jobs"},
+        "services.worker.tasks.batch_tasks.*": {
+            "queue": "batch_jobs",
+            "routing_key": "batch.jobs",
+        },
     },
     # Task Queue Definitions
     # Define queues with specific priorities and settings
@@ -157,7 +160,12 @@ def task_prerun_handler(
     """
     logger.info(
         f"Task started: {task.name} [ID: {task_id}]",
-        extra={"task_id": task_id, "task_name": task.name, "args": args, "kwargs": kwargs},
+        extra={
+            "task_id": task_id,
+            "task_name": task.name,
+            "args": args,
+            "kwargs": kwargs,
+        },
     )
 
 

@@ -55,7 +55,11 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
     """
     logger.warning(
         f"API Exception: {exc.detail}",
-        extra={"status_code": exc.status_code, "path": request.url.path, "method": request.method},
+        extra={
+            "status_code": exc.status_code,
+            "path": request.url.path,
+            "method": request.method,
+        },
     )
 
     return JSONResponse(
@@ -67,7 +71,9 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
                 "status_code": exc.status_code,
                 "path": request.url.path,
                 "timestamp": str(
-                    logging.Formatter().formatTime(logging.LogRecord("", 0, "", 0, "", (), None))
+                    logging.Formatter().formatTime(
+                        logging.LogRecord("", 0, "", 0, "", (), None)
+                    )
                 ),
             }
         },
@@ -113,7 +119,9 @@ async def validation_exception_handler(
     )
 
 
-async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
+async def database_exception_handler(
+    request: Request, exc: SQLAlchemyError
+) -> JSONResponse:
     """
     Database Exception Handler
 

@@ -85,7 +85,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not allowed:
             logger.warning(
                 f"Rate limit exceeded for user: {user_id}",
-                extra={"user_id": user_id, "path": request.url.path, "method": request.method},
+                extra={
+                    "user_id": user_id,
+                    "path": request.url.path,
+                    "method": request.method,
+                },
             )
 
             raise HTTPException(
@@ -174,7 +178,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             # Update tokens (cap at burst limit)
             tokens = min(
-                tokens + tokens_to_add, settings.RATE_LIMIT_PER_MINUTE + settings.RATE_LIMIT_BURST
+                tokens + tokens_to_add,
+                settings.RATE_LIMIT_PER_MINUTE + settings.RATE_LIMIT_BURST,
             )
 
             # Check if request allowed
@@ -192,7 +197,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             await pipe.execute()
 
             # Calculate reset time
-            reset_time = int(now + (1 - tokens) / (settings.RATE_LIMIT_PER_MINUTE / 60.0))
+            reset_time = int(
+                now + (1 - tokens) / (settings.RATE_LIMIT_PER_MINUTE / 60.0)
+            )
 
             return allowed, int(tokens), reset_time
 

@@ -25,7 +25,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 # Configure logging
 logging.basicConfig(
-    level=settings.LOG_LEVEL, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=settings.LOG_LEVEL,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -113,4 +114,9 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host=settings.API_HOST, port=settings.API_PORT, reload=settings.DEBUG)
+    uvicorn.run(
+        "main:app",
+        host=settings.API_HOST,
+        port=settings.API_PORT,
+        reload=settings.DEBUG,
+    )

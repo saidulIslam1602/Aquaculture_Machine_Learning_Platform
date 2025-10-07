@@ -91,4 +91,7 @@ async def reset_performance_metrics(
     """
     performance_metrics.reset()
 
-    return {"message": "Performance metrics reset successfully", "timestamp": str(time.time())}
+    return {
+        "message": "Performance metrics reset successfully",
+        "timestamp": str(time.time()),
+    }
