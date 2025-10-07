@@ -1,0 +1,132 @@
+# PersistentVolumeClaims
+# Provides persistent storage for stateful services
+
+---
+# Models Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: models-pvc
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+    type: models
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods can read/write
+  storageClassName: efs-sc  # AWS EFS for shared storage
+  resources:
+    requests:
+      storage: 100Gi  # 100GB for model storage
+  
+  # Volume binding mode
+  volumeMode: Filesystem
+
+---
+# Data Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: aquaculture-prod
+  labels:
+    app: data-service
+    type: data
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 500Gi  # 500GB for data storage
+  volumeMode: Filesystem
+
+---
+# Logs Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logs-pvc
+  namespace: aquaculture-prod
+  labels:
+    type: logs
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: efs-sc
+  resources:
+    requests:
+      storage: 50Gi  # 50GB for logs
+  volumeMode: Filesystem
+
+---
+# Prometheus Data PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data-pvc
+  namespace: aquaculture-prod
+  labels:
+    app: prometheus
+    type: metrics
+spec:
+  accessModes:
+    - ReadWriteOnce  # Single pod access
+  storageClassName: gp3  # AWS EBS GP3 for performance
+  resources:
+    requests:
+      storage: 100Gi
+  volumeMode: Filesystem
+
+---
+# Grafana Data PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-data-pvc
+  namespace: aquaculture-prod
+  labels:
+    app: grafana
+    type: dashboards
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 10Gi
+  volumeMode: Filesystem
+
+---
+# StorageClass for EFS (AWS)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: efs-sc
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: fs-xxxxx  # Replace with actual EFS ID
+  directoryPerms: "700"
+  gidRangeStart: "1000"
+  gidRangeEnd: "2000"
+  basePath: "/aquaculture"
+mountOptions:
+  - tls
+  - iam
+
+---
+# StorageClass for GP3 (AWS EBS)
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+  kmsKeyId: "arn:aws:kms:region:account:key/xxxxx"
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer

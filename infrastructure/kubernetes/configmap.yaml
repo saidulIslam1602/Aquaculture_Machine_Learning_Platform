@@ -1,0 +1,161 @@
+# Kubernetes ConfigMaps
+# Stores non-sensitive configuration data
+
+---
+# API Service Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-config
+  namespace: aquaculture-prod
+  labels:
+    app: api-service
+    tier: backend
+data:
+  # API Configuration
+  API_V1_PREFIX: "/api/v1"
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  PROJECT_NAME: "Aquaculture ML Platform"
+  VERSION: "0.1.0"
+  
+  # Environment
+  ENVIRONMENT: "production"
+  DEBUG: "false"
+  LOG_LEVEL: "INFO"
+  
+  # CORS Configuration
+  CORS_ORIGINS: "https://app.example.com,https://admin.example.com"
+  CORS_ALLOW_CREDENTIALS: "true"
+  
+  # Rate Limiting
+  RATE_LIMIT_PER_MINUTE: "100"
+  RATE_LIMIT_BURST: "20"
+  
+  # Monitoring
+  PROMETHEUS_ENABLED: "true"
+  
+  # Feature Flags
+  ENABLE_CACHING: "true"
+  ENABLE_RATE_LIMITING: "true"
+  ENABLE_AUTHENTICATION: "true"
+
+---
+# ML Service Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-config
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+    tier: ml
+data:
+  # Model Configuration
+  MODEL_BASE_PATH: "/app/models"
+  ACTIVE_MODEL_VERSION: "v1.0.0"
+  MODEL_ARCHITECTURE: "resnet50"
+  NUM_CLASSES: "31"
+  
+  # Inference Configuration
+  BATCH_SIZE: "32"
+  MAX_BATCH_WAIT_TIME: "0.1"
+  INFERENCE_DEVICE: "cuda"
+  ENABLE_MIXED_PRECISION: "true"
+  
+  # Performance
+  NUM_WORKERS: "4"
+  ENABLE_MODEL_COMPILATION: "false"
+  
+  # Caching
+  ENABLE_PREDICTION_CACHE: "true"
+  CACHE_TTL_SECONDS: "3600"
+  CACHE_MAX_SIZE: "10000"
+  
+  # Monitoring
+  ENABLE_PERFORMANCE_TRACKING: "true"
+  ENABLE_DRIFT_DETECTION: "true"
+  ALERT_THRESHOLD_LATENCY_MS: "500"
+
+---
+# Worker Service Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: worker-config
+  namespace: aquaculture-prod
+  labels:
+    app: worker-service
+    tier: worker
+data:
+  # Celery Configuration
+  CELERY_BROKER_URL: "redis://redis-service:6379/1"
+  CELERY_RESULT_BACKEND: "redis://redis-service:6379/2"
+  
+  # Worker Settings
+  WORKER_PREFETCH_MULTIPLIER: "4"
+  WORKER_MAX_TASKS_PER_CHILD: "1000"
+  
+  # Task Settings
+  TASK_TIME_LIMIT: "3600"
+  TASK_SOFT_TIME_LIMIT: "3300"
+  TASK_MAX_RETRIES: "3"
+  
+  # Logging
+  LOG_LEVEL: "INFO"
+
+---
+# Prometheus Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: aquaculture-prod
+  labels:
+    app: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'aquaculture-prod'
+        environment: 'production'
+    
+    scrape_configs:
+      - job_name: 'kubernetes-apiservers'
+        kubernetes_sd_configs:
+          - role: endpoints
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace, __meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+            action: keep
+            regex: default;kubernetes;https
+      
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            action: replace
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            action: replace
+            target_label: kubernetes_pod_name
