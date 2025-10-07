@@ -1,0 +1,47 @@
+# Multi-stage build for ML service
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Final stage
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python dependencies
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+# Copy application code
+COPY services/ml-service /app/services/ml-service
+COPY services/__init__.py /app/services/__init__.py
+
+# Create directories
+RUN mkdir -p /app/models /app/data
+
+# Create non-root user
+RUN useradd -m -u 1000 mluser && chown -R mluser:mluser /app
+USER mluser
+
+EXPOSE 8001
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8001/health')"
+
+CMD ["uvicorn", "services.ml-service.main:app", "--host", "0.0.0.0", "--port", "8001"]
