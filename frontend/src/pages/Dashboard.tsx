@@ -26,13 +26,10 @@ import {
   Assessment,
 } from '@mui/icons-material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { apiClient } from '../services/api';
 import type { DashboardStats, MetricData } from '../types';
 
 /**
- * Metric Card Component
- * 
- * Displays a single metric with icon and value.
+ * Metric Card Component Props
  */
 interface MetricCardProps {
   title: string;
@@ -41,6 +38,14 @@ interface MetricCardProps {
   color: string;
 }
 
+/**
+ * Metric Card Component
+ * 
+ * Displays a single metric with icon and value.
+ * 
+ * @param props - Component props
+ * @returns Metric card component
+ */
 const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon, color }) => (
   <Card>
     <CardContent>
@@ -163,11 +168,11 @@ const Dashboard: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   dataKey="timestamp"
-                  tickFormatter={(ts) => new Date(ts).toLocaleTimeString()}
+                  tickFormatter={(ts: number) => new Date(ts).toLocaleTimeString()}
                 />
                 <YAxis />
                 <Tooltip
-                  labelFormatter={(ts) => new Date(ts).toLocaleString()}
+                  labelFormatter={(ts: number) => new Date(ts).toLocaleString()}
                 />
                 <Line
                   type="monotone"
