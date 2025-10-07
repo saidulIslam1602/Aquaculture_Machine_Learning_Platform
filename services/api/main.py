@@ -9,14 +9,14 @@ import logging
 from .core.config import settings
 from .core.database import init_db
 from .core.redis_client import close_redis
-from .routes import auth, health, tasks
+from .routes import auth, health, tasks, metrics
 from .routes.ml import inference as ml_inference
 from .middleware.error_handlers import (
     api_exception_handler,
     validation_exception_handler,
     database_exception_handler,
     generic_exception_handler,
-    APIException
+    APIException,
 )
 from .middleware.logging_middleware import RequestLoggingMiddleware
 from .middleware.rate_limiter import RateLimitMiddleware
@@ -69,6 +69,7 @@ app.include_router(health.router)
 app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ml_inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(tasks.router, prefix=settings.API_V1_PREFIX)
+app.include_router(metrics.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")

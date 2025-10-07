@@ -227,18 +227,52 @@ terraform apply
 
 ## 📈 Performance
 
-### Benchmarks
-- API latency: <50ms (p95)
-- Inference time: <100ms per image
-- Throughput: 1000+ requests/second
-- Database queries: <10ms (p95)
+### Real-time Metrics
 
-### Optimization
-- Redis caching for frequent queries
-- Database connection pooling
-- Async I/O with FastAPI
-- Model optimization (quantization, pruning)
-- Batch processing for high throughput
+Access actual performance metrics at: `GET /api/v1/metrics/performance`
+
+The application tracks and reports:
+- **Latency Percentiles**: p50, p95, p99 (measured in real-time)
+- **Throughput**: Requests per second (sliding window)
+- **Error Rate**: Percentage of failed requests
+- **Uptime**: Application uptime in seconds
+
+Example response:
+```json
+{
+  "latency_mean_ms": 45.2,
+  "latency_p50_ms": 38.5,
+  "latency_p95_ms": 89.3,
+  "latency_p99_ms": 145.7,
+  "throughput_rps": 234.5,
+  "error_rate": 0.0012,
+  "total_requests": 15420,
+  "uptime_seconds": 86400
+}
+```
+
+### Expected Performance (Production)
+
+Based on architecture and implementation:
+- **API latency**: 30-80ms (p95) - FastAPI + async I/O
+- **Inference time**: 50-150ms per image - PyTorch with GPU
+- **Throughput**: 500-2000 req/s - With horizontal scaling
+- **Database queries**: 5-20ms (p95) - Connection pooling + indexes
+
+Actual performance depends on:
+- Hardware (CPU/GPU specs)
+- Network latency
+- Database load
+- Model complexity
+- Concurrent users
+
+### Optimization Features
+- Redis caching for frequent queries (sub-millisecond)
+- Database connection pooling (20 connections)
+- Async I/O with FastAPI (non-blocking)
+- Model optimization ready (quantization, pruning)
+- Batch processing for high throughput (32 images/batch)
+- Horizontal pod autoscaling (3-20 replicas)
 
 ## 🛠️ Development
 

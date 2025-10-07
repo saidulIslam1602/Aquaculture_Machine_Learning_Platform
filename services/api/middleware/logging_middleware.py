@@ -20,6 +20,8 @@ import logging
 import json
 from typing import Callable
 
+from ..utils.metrics import performance_metrics
+
 logger = logging.getLogger(__name__)
 
 
@@ -93,6 +95,11 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Calculate processing time
             process_time = time.time() - start_time
+            process_time_ms = process_time * 1000
+
+            # Record metrics for performance tracking
+            success = response.status_code < 400
+            performance_metrics.record_request(process_time_ms, success=success)
 
             # Add custom headers
             response.headers["X-Request-ID"] = request_id
@@ -102,14 +109,14 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             response_info = {
                 **request_info,
                 "status_code": response.status_code,
-                "process_time_ms": process_time * 1000,
+                "process_time_ms": process_time_ms,
             }
 
             log_level = logging.INFO if response.status_code < 400 else logging.WARNING
             logger.log(
                 log_level,
                 f"Request completed: {request.method} {request.url.path} "
-                f"[{response.status_code}] {process_time*1000:.2f}ms",
+                f"[{response.status_code}] {process_time_ms:.2f}ms",
                 extra=response_info,
             )
 
