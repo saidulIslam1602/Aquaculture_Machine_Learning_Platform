@@ -11,7 +11,7 @@
  *   - Type-safe requests
  */
 
-import axios, { AxiosInstance, AxiosError, InternalAxeError } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import type {
   User,
   LoginCredentials,
@@ -25,7 +25,7 @@ import type {
 } from '../types';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
 const API_TIMEOUT = 30000; // 30 seconds
 
 /**

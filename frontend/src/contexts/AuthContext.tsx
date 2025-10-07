@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
       setIsLoading(true);
-      const authToken = await apiClient.login(credentials);
+      await apiClient.login(credentials);
       
       // TODO: Fetch user profile
       const mockUser: User = {
