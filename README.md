@@ -272,6 +272,31 @@ terraform plan
 terraform apply
 ```
 
+### GitHub Actions Secrets
+
+The CI/CD pipeline requires the following secrets to be configured in your GitHub repository:
+
+#### Required Secrets
+- `SLACK_WEBHOOK_URL`: Slack webhook URL for CI/CD notifications
+- `KUBE_CONFIG_PRODUCTION`: Kubernetes config for production deployment
+- `KUBE_CONFIG_STAGING`: Kubernetes config for staging deployment
+
+#### Optional Secrets
+- `DOCKER_REGISTRY_TOKEN`: Token for private Docker registry (if using)
+- `SONAR_TOKEN`: SonarCloud token for code quality analysis (if enabled)
+
+#### Setting up Secrets
+1. Go to your GitHub repository
+2. Navigate to Settings → Secrets and variables → Actions
+3. Click "New repository secret"
+4. Add each required secret with its corresponding value
+
+**Example Slack Webhook Setup:**
+1. Create a Slack app at https://api.slack.com/apps
+2. Add incoming webhook integration
+3. Copy the webhook URL
+4. Add it as `SLACK_WEBHOOK_URL` secret in GitHub
+
 ## 🔐 Security
 
 - JWT-based authentication
