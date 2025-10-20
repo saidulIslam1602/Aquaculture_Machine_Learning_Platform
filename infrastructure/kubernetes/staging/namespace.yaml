@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aquaculture-staging
+  labels:
+    name: aquaculture-staging
+    environment: staging

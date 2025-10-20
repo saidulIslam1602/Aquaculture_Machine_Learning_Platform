@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aquaculture-prod
+  labels:
+    name: aquaculture-prod
+    environment: production

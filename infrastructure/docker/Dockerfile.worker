@@ -1,0 +1,46 @@
+# Multi-stage build for Worker service
+FROM python:3.10-slim as builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Final stage
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python dependencies
+COPY --from=builder /root/.local /root/.local
+ENV PATH=/root/.local/bin:$PATH
+
+# Copy application code
+COPY services/worker /app/services/worker
+COPY services/__init__.py /app/services/__init__.py
+
+# Create directories for logs and data
+RUN mkdir -p /app/logs /app/data
+
+# Create non-root user
+RUN useradd -m -u 1000 worker && chown -R worker:worker /app
+USER worker
+
+# Health check for worker (check if Celery is running)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD celery -A services.worker.celery_app inspect ping || exit 1
+
+# Start Celery worker
+CMD ["celery", "-A", "services.worker.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
