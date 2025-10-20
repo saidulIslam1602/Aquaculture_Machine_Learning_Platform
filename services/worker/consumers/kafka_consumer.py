@@ -23,9 +23,8 @@ from kafka import KafkaConsumer, KafkaProducer
 from kafka.errors import KafkaError
 import json
 import logging
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional
 import signal
-import sys
 from threading import Event
 import time
 from datetime import datetime
@@ -236,8 +235,8 @@ class FishImageConsumer:
             This is a placeholder. Actual implementation should
             call ML inference service.
         """
-        # Extract image data
-        image_data = message.get("image_data")
+        # Extract image data (placeholder for future ML processing)
+        message.get("image_data")
         image_id = message.get("image_id")
         metadata = message.get("metadata", {})
 
@@ -426,7 +425,8 @@ class FishImageConsumer:
                 f"  Messages failed: {self.messages_failed}\n"
                 f"  Runtime: {runtime:.2f}s\n"
                 f"  Throughput: {throughput:.2f} msg/s\n"
-                f"  Avg processing time: {(self.total_processing_time/self.messages_processed*1000):.2f}ms"
+                f"  Avg processing time: "
+                f"{(self.total_processing_time/self.messages_processed*1000):.2f}ms"
                 if self.messages_processed > 0
                 else "  No messages processed"
             )

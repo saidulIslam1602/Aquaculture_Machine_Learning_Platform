@@ -24,7 +24,6 @@ import logging
 from datetime import datetime
 from threading import Lock
 import hashlib
-import json
 
 from ..core.config import ml_settings
 

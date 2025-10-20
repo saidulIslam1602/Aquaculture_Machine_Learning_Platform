@@ -4,7 +4,6 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import logging
 import time
 

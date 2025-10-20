@@ -221,7 +221,7 @@ def decode_access_token(token: str) -> Dict[str, Any]:
             token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
-    except JWTError as e:
+    except JWTError:
         # Token is invalid, expired, or tampered
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

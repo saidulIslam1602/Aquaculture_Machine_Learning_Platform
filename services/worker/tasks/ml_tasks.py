@@ -18,7 +18,7 @@ Task Types:
     - Performance benchmarking
 """
 
-from celery import Task, group, chord
+from celery import Task, group
 from celery.utils.log import get_task_logger
 from typing import Dict, List, Any, Optional
 import time
@@ -306,7 +306,7 @@ def load_model(self, model_version: str, force_reload: bool = False) -> Dict[str
 
     try:
         # Load model
-        model = self.model_manager.load_model(
+        self.model_manager.load_model(
             version=model_version, force_reload=force_reload
         )
 
@@ -375,7 +375,7 @@ def benchmark_model(
 
     try:
         # Load model
-        model = self.model_manager.get_model(model_version)
+        self.model_manager.get_model(model_version)
 
         # Generate dummy data
         dummy_images = [

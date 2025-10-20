@@ -1,6 +1,6 @@
 """Prediction database model"""
 
-from sqlalchemy import Column, String, Integer, Numeric, DateTime, ForeignKey
+from sqlalchemy import Column, String, Integer, Numeric, DateTime, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship

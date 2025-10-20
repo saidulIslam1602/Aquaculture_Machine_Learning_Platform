@@ -11,12 +11,9 @@ Industry Standards:
     - Progress tracking
 """
 
-from celery import Task
 from celery.utils.log import get_task_logger
-from typing import Dict, Any, List
+from typing import Dict, Any
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
 
 from ..celery_app import celery_app
 
@@ -47,7 +44,7 @@ def cleanup_expired_results(self) -> Dict[str, Any]:
     """
     try:
         # Get Celery app
-        app = self.app
+        self.app  # Celery app reference
 
         # Get all task results older than 24 hours
         cutoff_time = datetime.utcnow() - timedelta(hours=24)
@@ -161,8 +158,8 @@ def aggregate_predictions(self, start_date: str, end_date: str) -> Dict[str, Any
     """
     try:
         # Parse dates
-        start = datetime.fromisoformat(start_date)
-        end = datetime.fromisoformat(end_date)
+        datetime.fromisoformat(start_date)  # Parse start date
+        datetime.fromisoformat(end_date)  # Parse end date
 
         # TODO: Implement actual aggregation with database
         stats = {

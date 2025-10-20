@@ -15,8 +15,8 @@ from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
-from typing import Union
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 

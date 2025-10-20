@@ -12,6 +12,7 @@ Industry Standards:
 
 from fastapi import APIRouter, Depends
 from typing import Dict, Any
+import time
 from ..core.security import get_current_active_user
 from ..utils.metrics import performance_metrics
 
@@ -21,7 +22,8 @@ router = APIRouter(prefix="/metrics", tags=["Metrics"])
 @router.get(
     "/performance",
     summary="Get Performance Metrics",
-    description="Returns real-time performance statistics including latency percentiles and throughput",
+    description="Returns real-time performance statistics including "
+                "latency percentiles and throughput",
 )
 async def get_performance_metrics(
     current_user: Dict[str, Any] = Depends(get_current_active_user),

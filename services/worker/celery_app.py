@@ -24,7 +24,6 @@ from celery.signals import task_prerun, task_postrun, task_failure
 from kombu import Queue, Exchange
 import logging
 from typing import Dict, Any
-import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

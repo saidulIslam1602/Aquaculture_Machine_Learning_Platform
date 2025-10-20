@@ -18,7 +18,6 @@ Architecture:
 """
 
 import torch
-import torch.nn as nn
 from typing import Dict, List, Optional, Tuple, Any
 import numpy as np
 from PIL import Image

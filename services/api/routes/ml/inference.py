@@ -23,14 +23,11 @@ Endpoints:
 
 from fastapi import (
     APIRouter,
-    File,
-    UploadFile,
     HTTPException,
     status,
     Depends,
     BackgroundTasks,
 )
-from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, validator
 from PIL import Image
@@ -102,7 +99,10 @@ class PredictionRequest(BaseModel):
     class Config:
         schema_extra = {
             "example": {
-                "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "image_base64": (
+                    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+                    "AAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                ),
                 "model_version": "v1.0.0",
                 "return_probabilities": True,
             }

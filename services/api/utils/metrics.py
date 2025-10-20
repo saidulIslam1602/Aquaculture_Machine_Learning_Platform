@@ -11,7 +11,7 @@ import threading
 from typing import Dict, Any, List, Optional
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from prometheus_client import Counter, Histogram, Gauge, Info, Enum
+from prometheus_client import Counter, Histogram, Gauge
 import logging
 
 logger = logging.getLogger(__name__)
@@ -368,9 +368,9 @@ class MetricsCollector:
     def update_system_metrics(self):
         """Update system-level metrics"""
         try:
-            # CPU and Memory
-            cpu_percent = psutil.cpu_percent()
-            memory = psutil.virtual_memory()
+            # CPU and Memory (metrics collected via psutil but not directly used here)
+            psutil.cpu_percent()
+            psutil.virtual_memory()
 
             # Database connections (mock - replace with actual DB connection count)
             database_connections.set(10)  # Replace with actual count
