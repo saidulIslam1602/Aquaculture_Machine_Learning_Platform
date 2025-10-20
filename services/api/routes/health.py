@@ -1,11 +1,12 @@
 """Health check routes"""
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from ..core.config import settings
 from ..core.database import get_db
 from ..core.redis_client import get_redis
-from ..core.config import settings
 
 router = APIRouter(tags=["health"])
 

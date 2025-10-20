@@ -19,11 +19,12 @@ Architecture:
     - Workers: Multiple processes for parallelism
 """
 
-from celery import Celery
-from celery.signals import task_prerun, task_postrun, task_failure
-from kombu import Queue, Exchange
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
+
+from celery import Celery
+from celery.signals import task_failure, task_postrun, task_prerun
+from kombu import Exchange, Queue
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

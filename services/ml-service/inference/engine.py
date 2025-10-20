@@ -17,17 +17,18 @@ Architecture:
     - Async processing for non-blocking inference
 """
 
-import torch
-from typing import Dict, List, Optional, Tuple, Any
-import numpy as np
-from PIL import Image
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
-import time
 import hashlib
+import logging
+import time
 from collections import OrderedDict
 from threading import Lock
-import logging
+from typing import Any, Dict, List, Optional, Tuple
+
+import albumentations as A
+import numpy as np
+import torch
+from albumentations.pytorch import ToTensorV2
+from PIL import Image
 
 from ..core.config import ml_settings
 from ..models.model_manager import model_manager

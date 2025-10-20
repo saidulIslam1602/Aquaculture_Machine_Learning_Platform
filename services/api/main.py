@@ -1,29 +1,27 @@
 """Main FastAPI application"""
 
+import logging
+import time
+
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
-import logging
-import time
+from sqlalchemy.exc import SQLAlchemyError
 
 from .core.config import settings
 from .core.database import init_db
 from .core.redis_client import close_redis
-from .routes import auth, health, tasks, metrics
-from .routes.ml import inference as ml_inference
-from .utils.metrics import performance_metrics, get_business_metrics_endpoint
-from .middleware.error_handlers import (
-    api_exception_handler,
-    validation_exception_handler,
-    database_exception_handler,
-    generic_exception_handler,
-    APIException,
-)
+from .middleware.error_handlers import (APIException, api_exception_handler,
+                                        database_exception_handler,
+                                        generic_exception_handler,
+                                        validation_exception_handler)
 from .middleware.logging_middleware import RequestLoggingMiddleware
 from .middleware.rate_limiter import RateLimitMiddleware
-from fastapi.exceptions import RequestValidationError
-from sqlalchemy.exc import SQLAlchemyError
+from .routes import auth, health, metrics, tasks
+from .routes.ml import inference as ml_inference
+from .utils.metrics import get_business_metrics_endpoint, performance_metrics
 
 # Configure logging
 logging.basicConfig(

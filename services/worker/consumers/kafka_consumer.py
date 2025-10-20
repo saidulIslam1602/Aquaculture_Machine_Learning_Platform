@@ -19,15 +19,16 @@ Architecture:
     - Metrics and monitoring
 """
 
-from kafka import KafkaConsumer, KafkaProducer
-from kafka.errors import KafkaError
 import json
 import logging
-from typing import Dict, Any, Optional
 import signal
-from threading import Event
 import time
 from datetime import datetime
+from threading import Event
+from typing import Any, Dict, Optional
+
+from kafka import KafkaConsumer, KafkaProducer
+from kafka.errors import KafkaError
 
 logger = logging.getLogger(__name__)
 

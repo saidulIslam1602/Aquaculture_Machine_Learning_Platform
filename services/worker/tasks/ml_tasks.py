@@ -18,18 +18,20 @@ Task Types:
     - Performance benchmarking
 """
 
+import base64
+import io
+import time
+from typing import Any, Dict, List, Optional
+
+import numpy as np
 from celery import Task, group
 from celery.utils.log import get_task_logger
-from typing import Dict, List, Any, Optional
-import time
 from PIL import Image
-import io
-import base64
-import numpy as np
 
-from ..celery_app import celery_app
 from services.ml_service.inference.engine import inference_engine
 from services.ml_service.models.model_manager import model_manager
+
+from ..celery_app import celery_app
 
 # Task-specific logger
 logger = get_task_logger(__name__)

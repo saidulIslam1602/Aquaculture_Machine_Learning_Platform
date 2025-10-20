@@ -10,9 +10,11 @@ Industry Standards:
     - Percentile calculations
 """
 
-from fastapi import APIRouter, Depends
-from typing import Dict, Any
 import time
+from typing import Any, Dict
+
+from fastapi import APIRouter, Depends
+
 from ..core.security import get_current_active_user
 from ..utils.metrics import performance_metrics
 

@@ -5,14 +5,15 @@ Provides comprehensive metrics collection for the Aquaculture ML Platform
 including business KPIs, system performance, and custom metrics.
 """
 
-import time
-import psutil
+import logging
 import threading
-from typing import Dict, Any, List, Optional
+import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from prometheus_client import Counter, Histogram, Gauge
-import logging
+from typing import Any, Dict, List, Optional
+
+import psutil
+from prometheus_client import Counter, Gauge, Histogram
 
 logger = logging.getLogger(__name__)
 

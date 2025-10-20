@@ -16,14 +16,15 @@ Architecture:
     - Observer pattern for model updates
 """
 
-import torch
-import torch.nn as nn
-from typing import Dict, Optional, Any, List
-from pathlib import Path
+import hashlib
 import logging
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
-import hashlib
+from typing import Any, Dict, List, Optional
+
+import torch
+import torch.nn as nn
 
 from ..core.config import ml_settings
 

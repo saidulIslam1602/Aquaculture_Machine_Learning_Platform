@@ -1,13 +1,15 @@
 """Authentication routes"""
 
+from datetime import timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from datetime import timedelta
 
-from ..core.database import get_db
-from ..core.security import verify_password, create_access_token, get_password_hash
 from ..core.config import settings
+from ..core.database import get_db
+from ..core.security import (create_access_token, get_password_hash,
+                             verify_password)
 from ..models.user import User
 from ..schemas.user import Token, UserCreate, UserResponse
 

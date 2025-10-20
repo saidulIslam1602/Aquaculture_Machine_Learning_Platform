@@ -11,14 +11,15 @@ Industry Standards:
     - PII redaction
 """
 
+import json
+import logging
+import time
+import uuid
+from typing import Callable
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-import time
-import uuid
-import logging
-import json
-from typing import Callable
 
 from ..utils.metrics import performance_metrics
 

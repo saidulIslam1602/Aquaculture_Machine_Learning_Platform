@@ -12,9 +12,10 @@ Industry Standards:
     - Separation of concerns by configuration domain
 """
 
-from pydantic_settings import BaseSettings
-from typing import List
 from functools import lru_cache
+from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):

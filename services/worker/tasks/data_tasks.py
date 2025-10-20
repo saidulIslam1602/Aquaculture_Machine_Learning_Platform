@@ -11,9 +11,10 @@ Industry Standards:
     - Progress tracking
 """
 
-from celery.utils.log import get_task_logger
-from typing import Dict, Any
 from datetime import datetime, timedelta
+from typing import Any, Dict
+
+from celery.utils.log import get_task_logger
 
 from ..celery_app import celery_app
 

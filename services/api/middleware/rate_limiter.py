@@ -11,15 +11,16 @@ Industry Standards:
     - Rate limit headers (X-RateLimit-*)
 """
 
-from fastapi import Request, HTTPException, status
+import logging
+import time
+from typing import Callable
+
+from fastapi import HTTPException, Request, status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from typing import Callable
-import time
-import logging
 
-from ..core.redis_client import get_redis
 from ..core.config import settings
+from ..core.redis_client import get_redis
 
 logger = logging.getLogger(__name__)
 

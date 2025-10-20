@@ -10,9 +10,10 @@ Industry Standards:
     - Performance monitoring settings
 """
 
-from pydantic_settings import BaseSettings
-from typing import List, Dict, Optional
 from functools import lru_cache
+from typing import Dict, List, Optional
+
+from pydantic_settings import BaseSettings
 
 
 class MLSettings(BaseSettings):

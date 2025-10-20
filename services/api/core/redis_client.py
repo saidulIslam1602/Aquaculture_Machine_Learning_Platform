@@ -1,7 +1,9 @@
 """Redis client for caching and rate limiting"""
 
-import redis.asyncio as redis
 from typing import Optional
+
+import redis.asyncio as redis
+
 from .config import settings
 
 # Global Redis client

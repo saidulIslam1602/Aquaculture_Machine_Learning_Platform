@@ -21,24 +21,19 @@ Endpoints:
     GET /api/v1/ml/models/{version} - Get model details
 """
 
-from fastapi import (
-    APIRouter,
-    HTTPException,
-    status,
-    Depends,
-    BackgroundTasks,
-)
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
-from PIL import Image
-import io
 import base64
-from datetime import datetime
+import io
 import logging
+from datetime import datetime
+from typing import Any, Dict, List, Optional
 
-from ...core.security import get_current_active_user
-from ...core.database import get_db
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from PIL import Image
+from pydantic import BaseModel, Field, validator
 from sqlalchemy.orm import Session
+
+from ...core.database import get_db
+from ...core.security import get_current_active_user
 
 logger = logging.getLogger(__name__)
 
