@@ -23,7 +23,7 @@ router = APIRouter(prefix="/metrics", tags=["Metrics"])
     "/performance",
     summary="Get Performance Metrics",
     description="Returns real-time performance statistics including "
-                "latency percentiles and throughput",
+    "latency percentiles and throughput",
 )
 async def get_performance_metrics(
     current_user: Dict[str, Any] = Depends(get_current_active_user),

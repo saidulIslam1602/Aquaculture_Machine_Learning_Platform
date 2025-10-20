@@ -306,9 +306,7 @@ def load_model(self, model_version: str, force_reload: bool = False) -> Dict[str
 
     try:
         # Load model
-        self.model_manager.load_model(
-            version=model_version, force_reload=force_reload
-        )
+        self.model_manager.load_model(version=model_version, force_reload=force_reload)
 
         # Get metadata
         metadata = self.model_manager.get_metadata(model_version)
