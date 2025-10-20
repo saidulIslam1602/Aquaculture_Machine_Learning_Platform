@@ -1,0 +1,247 @@
+# SLA Alerting Rules for Aquaculture ML Platform
+groups:
+  - name: sla_alerts
+    rules:
+      # API SLA Monitoring
+      - alert: APISLABreach
+        expr: |
+          (
+            (
+              sum(rate(http_requests_total{job="aquaculture-api",status!~"5.."}[5m])) /
+              sum(rate(http_requests_total{job="aquaculture-api"}[5m]))
+            ) < 0.999
+          ) and (
+            sum(rate(http_requests_total{job="aquaculture-api"}[5m])) > 0.1
+          )
+        for: 5m
+        labels:
+          severity: critical
+          component: sla
+          sla_type: availability
+          team: platform
+        annotations:
+          summary: "API availability SLA breach"
+          description: "API availability is {{ $value | humanizePercentage }}, below 99.9% SLA for 5 minutes."
+          runbook_url: "https://wiki.company.com/runbooks/sla-breach"
+          dashboard_url: "http://grafana:3000/d/sla-dashboard"
+
+      - alert: APILatencySLABreach
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m])
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          component: sla
+          sla_type: latency
+          team: platform
+        annotations:
+          summary: "API latency SLA breach"
+          description: "95th percentile latency is {{ $value }}s, above 1s SLA for 10 minutes."
+
+      # ML Service SLA Monitoring
+      - alert: MLServiceSLABreach
+        expr: |
+          (
+            (
+              sum(rate(http_requests_total{job="aquaculture-ml-service",status!~"5.."}[5m])) /
+              sum(rate(http_requests_total{job="aquaculture-ml-service"}[5m]))
+            ) < 0.995
+          ) and (
+            sum(rate(http_requests_total{job="aquaculture-ml-service"}[5m])) > 0.01
+          )
+        for: 5m
+        labels:
+          severity: critical
+          component: sla
+          sla_type: ml_availability
+          team: ml-ops
+        annotations:
+          summary: "ML service availability SLA breach"
+          description: "ML service availability is {{ $value | humanizePercentage }}, below 99.5% SLA."
+
+      - alert: MLPredictionLatencySLABreach
+        expr: |
+          histogram_quantile(0.95, 
+            rate(model_prediction_duration_seconds_bucket[5m])
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: sla
+          sla_type: ml_latency
+          team: ml-ops
+        annotations:
+          summary: "ML prediction latency SLA breach"
+          description: "95th percentile ML prediction latency is {{ $value }}s, above 2s SLA."
+
+      # Data Processing SLA
+      - alert: DataProcessingSLABreach
+        expr: |
+          (
+            time() - max(data_pipeline_last_success_timestamp)
+          ) > 3600  # 1 hour
+        for: 0s
+        labels:
+          severity: critical
+          component: sla
+          sla_type: data_processing
+          team: platform
+        annotations:
+          summary: "Data processing SLA breach"
+          description: "Data pipeline hasn't completed successfully in over 1 hour."
+
+      - alert: DataFreshnessSLABreach
+        expr: |
+          (
+            time() - max(data_last_updated_timestamp)
+          ) > 1800  # 30 minutes
+        for: 5m
+        labels:
+          severity: warning
+          component: sla
+          sla_type: data_freshness
+          team: platform
+        annotations:
+          summary: "Data freshness SLA breach"
+          description: "Data hasn't been updated in over 30 minutes."
+
+      # System Uptime SLA
+      - alert: SystemUptimeSLABreach
+        expr: |
+          (
+            (
+              sum(up{job=~"aquaculture-.*"}) /
+              count(up{job=~"aquaculture-.*"})
+            ) < 0.999
+          )
+        for: 2m
+        labels:
+          severity: critical
+          component: sla
+          sla_type: system_uptime
+          team: platform
+        annotations:
+          summary: "System uptime SLA breach"
+          description: "Overall system uptime is {{ $value | humanizePercentage }}, below 99.9% SLA."
+
+      # Business Process SLA
+      - alert: FishHealthCheckSLABreach
+        expr: |
+          (
+            time() - max(business_last_health_check_timestamp)
+          ) > 14400  # 4 hours
+        for: 0s
+        labels:
+          severity: warning
+          component: sla
+          sla_type: health_monitoring
+          team: operations
+        annotations:
+          summary: "Fish health check SLA breach"
+          description: "Fish health hasn't been checked in over 4 hours."
+
+      - alert: FeedingScheduleSLABreach
+        expr: |
+          (
+            time() - max(business_last_feeding_timestamp)
+          ) > 28800  # 8 hours
+        for: 0s
+        labels:
+          severity: critical
+          component: sla
+          sla_type: feeding_schedule
+          team: operations
+        annotations:
+          summary: "Feeding schedule SLA breach"
+          description: "Fish haven't been fed in over 8 hours."
+
+      # Recovery Time Objective (RTO) Monitoring
+      - alert: RTOBreach
+        expr: |
+          (
+            time() - min(service_recovery_start_timestamp)
+          ) > 900  # 15 minutes
+        for: 0s
+        labels:
+          severity: critical
+          component: sla
+          sla_type: rto
+          team: platform
+        annotations:
+          summary: "Recovery Time Objective (RTO) breach"
+          description: "Service recovery is taking longer than 15 minutes RTO."
+
+      # Recovery Point Objective (RPO) Monitoring
+      - alert: RPOBreach
+        expr: |
+          (
+            time() - max(backup_last_success_timestamp)
+          ) > 3600  # 1 hour
+        for: 0s
+        labels:
+          severity: critical
+          component: sla
+          sla_type: rpo
+          team: platform
+        annotations:
+          summary: "Recovery Point Objective (RPO) breach"
+          description: "Last successful backup was over 1 hour ago, exceeding RPO."
+
+      # Capacity SLA Monitoring
+      - alert: CapacitySLABreach
+        expr: |
+          (
+            sum(rate(http_requests_total{job="aquaculture-api"}[5m])) > 1000
+          ) and (
+            histogram_quantile(0.95, 
+              rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m])
+            ) > 1.0
+          )
+        for: 5m
+        labels:
+          severity: warning
+          component: sla
+          sla_type: capacity
+          team: platform
+        annotations:
+          summary: "System capacity SLA breach"
+          description: "System is under high load ({{ $value }} req/s) with degraded performance."
+
+      # Error Budget Monitoring
+      - alert: ErrorBudgetExhausted
+        expr: |
+          (
+            1 - (
+              sum(rate(http_requests_total{job="aquaculture-api",status!~"5.."}[30d])) /
+              sum(rate(http_requests_total{job="aquaculture-api"}[30d]))
+            )
+          ) > 0.001  # 0.1% error budget
+        for: 0s
+        labels:
+          severity: critical
+          component: sla
+          sla_type: error_budget
+          team: platform
+        annotations:
+          summary: "Monthly error budget exhausted"
+          description: "Error rate is {{ $value | humanizePercentage }}, exceeding 0.1% monthly budget."
+
+      # Customer-facing SLA
+      - alert: CustomerFacingSLABreach
+        expr: |
+          (
+            sum(rate(http_requests_total{job="aquaculture-api",endpoint=~"/api/v1/(predictions|health-status)",status!~"5.."}[5m])) /
+            sum(rate(http_requests_total{job="aquaculture-api",endpoint=~"/api/v1/(predictions|health-status)"}[5m]))
+          ) < 0.999
+        for: 3m
+        labels:
+          severity: critical
+          component: sla
+          sla_type: customer_facing
+          team: platform
+        annotations:
+          summary: "Customer-facing API SLA breach"
+          description: "Customer-facing endpoints availability is {{ $value | humanizePercentage }}, below 99.9% SLA."
+

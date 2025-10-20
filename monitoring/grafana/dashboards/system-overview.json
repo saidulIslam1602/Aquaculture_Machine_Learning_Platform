@@ -1,0 +1,422 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Aquaculture Platform - System Overview",
+    "tags": ["aquaculture", "overview", "production"],
+    "style": "dark",
+    "timezone": "UTC",
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Status",
+        "type": "stat",
+        "gridPos": {"x": 0, "y": 0, "w": 6, "h": 4},
+        "targets": [
+          {
+            "expr": "up{job=\"aquaculture-api\"}",
+            "legendFormat": "API Status",
+            "refId": "A"
+          },
+          {
+            "expr": "up{job=\"aquaculture-ml-service\"}",
+            "legendFormat": "ML Service",
+            "refId": "B"
+          },
+          {
+            "expr": "up{job=\"postgres\"}",
+            "legendFormat": "Database",
+            "refId": "C"
+          },
+          {
+            "expr": "up{job=\"redis\"}",
+            "legendFormat": "Cache",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "green", "value": 1}
+              ]
+            },
+            "mappings": [
+              {"options": {"0": {"text": "DOWN"}}, "type": "value"},
+              {"options": {"1": {"text": "UP"}}, "type": "value"}
+            ]
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Request Rate",
+        "type": "graph",
+        "gridPos": {"x": 6, "y": 0, "w": 9, "h": 4},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{job=\"aquaculture-api\"}[5m]))",
+            "legendFormat": "Total Requests/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{job=\"aquaculture-api\",status=~\"2..\"}[5m]))",
+            "legendFormat": "Success (2xx)",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{job=\"aquaculture-api\",status=~\"4..\"}[5m]))",
+            "legendFormat": "Client Error (4xx)",
+            "refId": "C"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{job=\"aquaculture-api\",status=~\"5..\"}[5m]))",
+            "legendFormat": "Server Error (5xx)",
+            "refId": "D"
+          }
+        ],
+        "yAxes": [
+          {"label": "Requests/sec", "min": 0}
+        ],
+        "legend": {
+          "show": true,
+          "values": true,
+          "current": true
+        }
+      },
+      {
+        "id": 3,
+        "title": "System Uptime",
+        "type": "stat",
+        "gridPos": {"x": 15, "y": 0, "w": 4, "h": 4},
+        "targets": [
+          {
+            "expr": "business_system_uptime_percentage * 100",
+            "legendFormat": "Uptime %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 99}
+              ]
+            },
+            "unit": "percent",
+            "decimals": 2
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "API Response Time Percentiles",
+        "type": "graph",
+        "gridPos": {"x": 19, "y": 0, "w": 5, "h": 4},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"aquaculture-api\"}[5m]))",
+            "legendFormat": "p50",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"aquaculture-api\"}[5m]))",
+            "legendFormat": "p95",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"aquaculture-api\"}[5m]))",
+            "legendFormat": "p99",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Response Time (seconds)", "min": 0}
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Infrastructure Metrics",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "100 - (avg(irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "CPU Usage %",
+            "refId": "A"
+          },
+          {
+            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100",
+            "legendFormat": "Memory Usage %",
+            "refId": "B"
+          },
+          {
+            "expr": "(node_filesystem_size_bytes{fstype!=\"tmpfs\"} - node_filesystem_free_bytes{fstype!=\"tmpfs\"}) / node_filesystem_size_bytes{fstype!=\"tmpfs\"} * 100",
+            "legendFormat": "Disk Usage %",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Percentage", "min": 0, "max": 100}
+        ],
+        "thresholds": [
+          {"value": 80, "colorMode": "critical", "op": "gt"}
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Database Performance",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 4, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends",
+            "legendFormat": "Active Connections - {{datname}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(pg_stat_database_xact_commit[5m])",
+            "legendFormat": "Transactions/sec - {{datname}}",
+            "refId": "B"
+          },
+          {
+            "expr": "pg_stat_activity_max_tx_duration{datname!~\"template.*\"}",
+            "legendFormat": "Longest Transaction (s) - {{datname}}",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Count/Duration", "min": 0}
+        ]
+      },
+      {
+        "id": 7,
+        "title": "ML Model Performance",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 10, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "model_prediction_accuracy",
+            "legendFormat": "Accuracy - {{model_type}}",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(model_prediction_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 Latency - {{model_type}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {"label": "Accuracy/Latency", "min": 0}
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Business KPIs",
+        "type": "stat",
+        "gridPos": {"x": 8, "y": 10, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "business_fish_mortality_rate * 100",
+            "legendFormat": "Mortality Rate %",
+            "refId": "A"
+          },
+          {
+            "expr": "business_feed_conversion_ratio",
+            "legendFormat": "Feed Conversion Ratio",
+            "refId": "B"
+          },
+          {
+            "expr": "business_water_quality_score * 100",
+            "legendFormat": "Water Quality %",
+            "refId": "C"
+          },
+          {
+            "expr": "business_daily_production_kg",
+            "legendFormat": "Daily Production (kg)",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": 0},
+                {"color": "yellow", "value": 80},
+                {"color": "red", "value": 95}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "vertical"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Security Events",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 10, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(security_login_attempts_total{status=\"failed\"}[5m])",
+            "legendFormat": "Failed Logins/sec",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(security_suspicious_activity_total[5m])",
+            "legendFormat": "Suspicious Activity/sec",
+            "refId": "B"
+          },
+          {
+            "expr": "rate(http_requests_total{job=\"aquaculture-api\",status=\"429\"}[5m])",
+            "legendFormat": "Rate Limited Requests/sec",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {"label": "Events/sec", "min": 0}
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Active Alerts",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 16, "w": 24, "h": 6},
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "legendFormat": "",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "left",
+              "displayMode": "list"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "severity"},
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "thresholds"
+                  }
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "steps": [
+                      {"color": "green", "value": null},
+                      {"color": "yellow", "value": "warning"},
+                      {"color": "red", "value": "critical"}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [
+            {"desc": true, "displayName": "Time"}
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "job": true,
+                "instance": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "alertname": "Alert",
+                "severity": "Severity",
+                "summary": "Summary"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "job",
+          "type": "query",
+          "query": "label_values(up, job)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "expr": "changes(process_start_time_seconds[5m]) > 0",
+          "iconColor": "blue",
+          "titleFormat": "Deployment",
+          "textFormat": "Service restarted"
+        }
+      ]
+    }
+  }
+}
+
+

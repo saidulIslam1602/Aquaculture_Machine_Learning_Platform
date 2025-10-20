@@ -1,0 +1,391 @@
+# Enhanced PrometheusRule for Kubernetes-native Alerting
+# Production-grade alerting rules for the Aquaculture ML Platform
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aquaculture-platform-alerts
+  namespace: aquaculture-prod
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    app: aquaculture-platform
+spec:
+  groups:
+  - name: kubernetes-infrastructure
+    interval: 30s
+    rules:
+    # Pod Restart Rate
+    - alert: HighPodRestartRate
+      expr: |
+        rate(kube_pod_container_status_restarts_total[15m]) * 60 * 15 > 5
+      for: 5m
+      labels:
+        severity: warning
+        component: kubernetes
+        team: platform
+      annotations:
+        summary: "High pod restart rate"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in the last 15 minutes"
+
+    # Pod Memory Usage
+    - alert: PodMemoryUsageHigh
+      expr: |
+        (container_memory_working_set_bytes{container!="POD",container!=""} / 
+         container_spec_memory_limit_bytes{container!="POD",container!=""}) > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: kubernetes
+        team: platform
+      annotations:
+        summary: "Pod memory usage high"
+        description: "Pod {{ $labels.pod }} memory usage is {{ $value | humanizePercentage }}"
+
+    # Pod CPU Throttling
+    - alert: PodCPUThrottling
+      expr: |
+        rate(container_cpu_cfs_throttled_seconds_total{container!="POD",container!=""}[5m]) /
+        rate(container_cpu_cfs_periods_total{container!="POD",container!=""}[5m]) > 0.25
+      for: 5m
+      labels:
+        severity: warning
+        component: kubernetes
+        team: platform
+      annotations:
+        summary: "Pod CPU throttling high"
+        description: "Pod {{ $labels.pod }} CPU throttling is {{ $value | humanizePercentage }}"
+
+    # Node Disk Space
+    - alert: NodeDiskSpaceHigh
+      expr: |
+        (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) /
+        node_filesystem_size_bytes{fstype!="tmpfs"} > 0.85
+      for: 5m
+      labels:
+        severity: warning
+        component: kubernetes
+        team: platform
+      annotations:
+        summary: "Node disk space high"
+        description: "Node {{ $labels.instance }} disk usage is {{ $value | humanizePercentage }}"
+
+  - name: aquaculture-api-sla
+    interval: 15s
+    rules:
+    # API Availability SLA
+    - alert: APIAvailabilitySLABreach
+      expr: |
+        (
+          sum(rate(http_requests_total{job="api-service",status!~"5.."}[5m])) /
+          sum(rate(http_requests_total{job="api-service"}[5m]))
+        ) < 0.999
+      for: 2m
+      labels:
+        severity: critical
+        component: api
+        sla_type: availability
+        team: platform
+      annotations:
+        summary: "API availability SLA breach"
+        description: "API availability is {{ $value | humanizePercentage }}, below 99.9% SLA"
+        runbook_url: "https://wiki.company.com/runbooks/api-sla-breach"
+        dashboard_url: "http://grafana:3000/d/api-sla"
+
+    # API Latency SLA
+    - alert: APILatencySLABreach
+      expr: |
+        histogram_quantile(0.95, 
+          sum(rate(http_request_duration_seconds_bucket{job="api-service"}[5m])) by (le)
+        ) > 1.0
+      for: 5m
+      labels:
+        severity: warning
+        component: api
+        sla_type: latency
+        team: platform
+      annotations:
+        summary: "API latency SLA breach"
+        description: "95th percentile latency is {{ $value }}s, above 1s SLA"
+
+    # API Error Budget
+    - alert: APIErrorBudgetExhausted
+      expr: |
+        (
+          1 - (
+            sum(rate(http_requests_total{job="api-service",status!~"5.."}[30d])) /
+            sum(rate(http_requests_total{job="api-service"}[30d]))
+          )
+        ) > 0.001
+      for: 0s
+      labels:
+        severity: critical
+        component: api
+        sla_type: error_budget
+        team: platform
+      annotations:
+        summary: "API monthly error budget exhausted"
+        description: "Error rate is {{ $value | humanizePercentage }}, exceeding 0.1% monthly budget"
+
+  - name: ml-model-performance
+    interval: 30s
+    rules:
+    # Model Accuracy Degradation
+    - alert: ModelAccuracyDegradation
+      expr: |
+        model_prediction_accuracy < 0.85
+      for: 10m
+      labels:
+        severity: warning
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "Model accuracy degradation"
+        description: "Model {{ $labels.model_type }} accuracy is {{ $value | humanizePercentage }}, below 85% threshold"
+        runbook_url: "https://wiki.company.com/runbooks/model-accuracy"
+
+    # Model Drift Detection
+    - alert: ModelDriftDetected
+      expr: |
+        model_drift_score > 0.7
+      for: 30m
+      labels:
+        severity: warning
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "Model drift detected"
+        description: "Model {{ $labels.model_type }} drift score is {{ $value }}, indicating potential degradation"
+
+    # Model Inference Latency
+    - alert: ModelInferenceLatencyHigh
+      expr: |
+        histogram_quantile(0.95, 
+          rate(model_prediction_duration_seconds_bucket[5m])
+        ) > 2.0
+      for: 5m
+      labels:
+        severity: warning
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "Model inference latency high"
+        description: "95th percentile inference time is {{ $value }}s for {{ $labels.model_type }}"
+
+    # GPU Utilization Low
+    - alert: GPUUtilizationLow
+      expr: |
+        nvidia_gpu_utilization < 20
+      for: 30m
+      labels:
+        severity: info
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "Low GPU utilization"
+        description: "GPU utilization is {{ $value }}% on {{ $labels.instance }}"
+
+  - name: business-kpis
+    interval: 60s
+    rules:
+    # Fish Mortality Rate Alert
+    - alert: HighFishMortalityRate
+      expr: |
+        business_fish_mortality_rate > 0.05
+      for: 15m
+      labels:
+        severity: critical
+        component: business
+        kpi: mortality
+        team: operations
+      annotations:
+        summary: "High fish mortality rate"
+        description: "Mortality rate is {{ $value | humanizePercentage }} in tank {{ $labels.tank_id }}"
+        runbook_url: "https://wiki.company.com/runbooks/high-mortality"
+
+    # Water Quality Degradation
+    - alert: WaterQualityDegradation
+      expr: |
+        business_water_quality_score < 0.8
+      for: 10m
+      labels:
+        severity: warning
+        component: business
+        kpi: water_quality
+        team: operations
+      annotations:
+        summary: "Water quality degradation"
+        description: "Water quality score is {{ $value }} in tank {{ $labels.tank_id }}"
+
+    # Production Target Missed
+    - alert: ProductionTargetMissed
+      expr: |
+        business_daily_production_kg < (business_daily_production_target_kg * 0.9)
+      for: 60m
+      labels:
+        severity: warning
+        component: business
+        kpi: production
+        team: operations
+      annotations:
+        summary: "Daily production target missed"
+        description: "Production is {{ $value }}kg, below 90% of target"
+
+  - name: security-alerts
+    interval: 30s
+    rules:
+    # Suspicious Login Activity
+    - alert: SuspiciousLoginActivity
+      expr: |
+        rate(security_login_attempts_total{status="failed"}[5m]) > 0.5
+      for: 2m
+      labels:
+        severity: warning
+        component: security
+        attack_type: brute_force
+        team: security
+      annotations:
+        summary: "Suspicious login activity"
+        description: "High rate of failed login attempts: {{ $value }}/sec"
+
+    # DDoS Attack Suspected
+    - alert: DDoSAttackSuspected
+      expr: |
+        rate(http_requests_total{job="api-service"}[1m]) > 1000
+      for: 2m
+      labels:
+        severity: critical
+        component: security
+        attack_type: ddos
+        team: security
+      annotations:
+        summary: "Potential DDoS attack"
+        description: "Extremely high request rate: {{ $value }}/sec"
+
+    # Unauthorized API Access
+    - alert: UnauthorizedAPIAccess
+      expr: |
+        rate(http_requests_total{job="api-service",status="403"}[5m]) > 0.2
+      for: 3m
+      labels:
+        severity: warning
+        component: security
+        attack_type: unauthorized_access
+        team: security
+      annotations:
+        summary: "High rate of unauthorized access"
+        description: "{{ $value }}/sec unauthorized access attempts"
+
+  - name: data-quality
+    interval: 60s
+    rules:
+    # Data Quality Score Low
+    - alert: DataQualityScoreLow
+      expr: |
+        data_quality_score < 0.8
+      for: 5m
+      labels:
+        severity: warning
+        component: data
+        team: platform
+      annotations:
+        summary: "Data quality score low"
+        description: "Data quality score is {{ $value }} for {{ $labels.data_type }}"
+
+    # High Missing Feature Rate
+    - alert: HighMissingFeatureRate
+      expr: |
+        feature_missing_rate > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: data
+        team: ml-ops
+      annotations:
+        summary: "High missing feature rate"
+        description: "{{ $value | humanizePercentage }} of {{ $labels.feature_name }} features are missing"
+
+    # Data Pipeline Stalled
+    - alert: DataPipelineStalled
+      expr: |
+        (time() - data_pipeline_last_success_timestamp) > 3600
+      for: 0s
+      labels:
+        severity: critical
+        component: data
+        team: platform
+      annotations:
+        summary: "Data pipeline stalled"
+        description: "Data pipeline hasn't completed successfully in over 1 hour"
+
+  - name: infrastructure-health
+    interval: 30s
+    rules:
+    # Database Connection Pool Exhausted
+    - alert: DatabaseConnectionPoolExhausted
+      expr: |
+        pg_stat_database_numbackends / pg_settings_max_connections > 0.9
+      for: 5m
+      labels:
+        severity: critical
+        component: database
+        team: platform
+      annotations:
+        summary: "Database connection pool exhausted"
+        description: "Database is using {{ $value | humanizePercentage }} of available connections"
+
+    # Redis Memory Usage High
+    - alert: RedisMemoryUsageHigh
+      expr: |
+        redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: cache
+        team: platform
+      annotations:
+        summary: "Redis memory usage high"
+        description: "Redis memory usage is {{ $value | humanizePercentage }}"
+
+    # Kafka Consumer Lag High
+    - alert: KafkaConsumerLagHigh
+      expr: |
+        kafka_consumer_lag_sum > 1000
+      for: 5m
+      labels:
+        severity: warning
+        component: messaging
+        team: platform
+      annotations:
+        summary: "Kafka consumer lag high"
+        description: "Consumer lag is {{ $value }} messages for topic {{ $labels.topic }}"
+
+  - name: certificate-expiry
+    interval: 24h
+    rules:
+    # TLS Certificate Expiring Soon
+    - alert: TLSCertificateExpiringSoon
+      expr: |
+        (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+      for: 0s
+      labels:
+        severity: warning
+        component: security
+        team: platform
+      annotations:
+        summary: "TLS certificate expiring soon"
+        description: "Certificate for {{ $labels.instance }} expires in {{ $value }} days"
+
+    # TLS Certificate Expired
+    - alert: TLSCertificateExpired
+      expr: |
+        (probe_ssl_earliest_cert_expiry - time()) / 86400 < 0
+      for: 0s
+      labels:
+        severity: critical
+        component: security
+        team: platform
+      annotations:
+        summary: "TLS certificate expired"
+        description: "Certificate for {{ $labels.instance }} has expired"

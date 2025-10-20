@@ -1,0 +1,446 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "ML Model Performance & Analytics",
+    "tags": ["ml", "models", "performance", "aquaculture"],
+    "style": "dark",
+    "timezone": "UTC",
+    "refresh": "1m",
+    "schemaVersion": 30,
+    "version": 1,
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Model Accuracy Trends",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "model_prediction_accuracy{model_type=\"fish_classification\"}",
+            "legendFormat": "Fish Classification",
+            "refId": "A"
+          },
+          {
+            "expr": "model_prediction_accuracy{model_type=\"health_assessment\"}",
+            "legendFormat": "Health Assessment",
+            "refId": "B"
+          },
+          {
+            "expr": "model_prediction_accuracy{model_type=\"growth_prediction\"}",
+            "legendFormat": "Growth Prediction",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Accuracy",
+            "min": 0.7,
+            "max": 1.0
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.85,
+            "colorMode": "critical",
+            "op": "lt",
+            "line": true,
+            "lineColor": "rgba(245, 54, 54, 0.9)"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.85],
+                "type": "lt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A", "5m", "now"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "Model Accuracy Alert",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 2,
+        "title": "Prediction Latency Distribution",
+        "type": "heatmap",
+        "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+        "targets": [
+          {
+            "expr": "rate(model_prediction_duration_seconds_bucket[5m])",
+            "legendFormat": "{{le}}",
+            "refId": "A"
+          }
+        ],
+        "heatmap": {
+          "xAxis": {
+            "show": true
+          },
+          "yAxis": {
+            "show": true,
+            "logBase": 1,
+            "min": "0",
+            "max": "5"
+          },
+          "yBucketBound": "upper"
+        },
+        "color": {
+          "cardColor": "#b4ff00",
+          "colorScale": "sqrt",
+          "colorScheme": "interpolateSpectral",
+          "exponent": 0.5,
+          "mode": "spectrum"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Model Drift Detection",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 8, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "model_drift_score",
+            "legendFormat": "Drift Score - {{model_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Drift Score",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.7,
+            "colorMode": "critical",
+            "op": "gt",
+            "line": true,
+            "lineColor": "rgba(245, 54, 54, 0.9)"
+          },
+          {
+            "value": 0.5,
+            "colorMode": "warning",
+            "op": "gt",
+            "line": true,
+            "lineColor": "rgba(237, 129, 40, 0.9)"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Prediction Volume",
+        "type": "graph",
+        "gridPos": {"x": 8, "y": 8, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "rate(model_predictions_total[5m])",
+            "legendFormat": "Predictions/sec - {{model_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Predictions/sec",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Model Uncertainty Distribution",
+        "type": "graph",
+        "gridPos": {"x": 16, "y": 8, "w": 8, "h": 6},
+        "targets": [
+          {
+            "expr": "model_prediction_uncertainty",
+            "legendFormat": "Uncertainty - {{model_type}}",
+            "refId": "A"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Uncertainty",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.3,
+            "colorMode": "warning",
+            "op": "gt"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Training Metrics",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 14, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "model_training_duration_seconds",
+            "legendFormat": "Training Duration - {{model_type}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(model_training_failures_total[1h])",
+            "legendFormat": "Training Failures/hour - {{model_type}}",
+            "refId": "B"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds) / Failures",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Model Performance Summary",
+        "type": "stat",
+        "gridPos": {"x": 12, "y": 14, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "avg(model_prediction_accuracy)",
+            "legendFormat": "Avg Accuracy",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(model_prediction_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95 Latency",
+            "refId": "B"
+          },
+          {
+            "expr": "sum(rate(model_predictions_total[5m]))",
+            "legendFormat": "Total Predictions/sec",
+            "refId": "C"
+          },
+          {
+            "expr": "max(model_drift_score)",
+            "legendFormat": "Max Drift Score",
+            "refId": "D"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.8},
+                {"color": "red", "value": 0.9}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Avg Accuracy"},
+              "properties": [
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "steps": [
+                      {"color": "red", "value": null},
+                      {"color": "yellow", "value": 0.8},
+                      {"color": "green", "value": 0.9}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "center",
+          "orientation": "horizontal"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Data Quality Metrics",
+        "type": "graph",
+        "gridPos": {"x": 0, "y": 20, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "data_quality_score{stage=\"input\"}",
+            "legendFormat": "Input Data Quality",
+            "refId": "A"
+          },
+          {
+            "expr": "data_quality_score{stage=\"processed\"}",
+            "legendFormat": "Processed Data Quality",
+            "refId": "B"
+          },
+          {
+            "expr": "feature_missing_rate",
+            "legendFormat": "Missing Features Rate - {{feature_name}}",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Quality Score / Missing Rate",
+            "min": 0,
+            "max": 1
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Model Resource Usage",
+        "type": "graph",
+        "gridPos": {"x": 12, "y": 20, "w": 12, "h": 6},
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\".*ml.*\"} / 1024 / 1024 / 1024",
+            "legendFormat": "Memory Usage (GB) - {{name}}",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\".*ml.*\"}[5m]) * 100",
+            "legendFormat": "CPU Usage % - {{name}}",
+            "refId": "B"
+          },
+          {
+            "expr": "nvidia_gpu_utilization",
+            "legendFormat": "GPU Utilization % - {{instance}}",
+            "refId": "C"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Usage",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Model Comparison Matrix",
+        "type": "table",
+        "gridPos": {"x": 0, "y": 26, "w": 24, "h": 8},
+        "targets": [
+          {
+            "expr": "model_prediction_accuracy",
+            "legendFormat": "",
+            "refId": "A",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(model_prediction_duration_seconds_bucket[5m]))",
+            "legendFormat": "",
+            "refId": "B",
+            "format": "table",
+            "instant": true
+          },
+          {
+            "expr": "rate(model_predictions_total[5m])",
+            "legendFormat": "",
+            "refId": "C",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "transformations": [
+          {
+            "id": "merge",
+            "options": {}
+          },
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "Time": true,
+                "__name__": true,
+                "job": true,
+                "instance": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "model_type": "Model Type",
+                "model_version": "Version",
+                "Value #A": "Accuracy",
+                "Value #B": "p95 Latency (s)",
+                "Value #C": "Predictions/sec"
+              }
+            }
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "center",
+              "displayMode": "color-background"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Accuracy"},
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "thresholds"
+                  }
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "steps": [
+                      {"color": "red", "value": null},
+                      {"color": "yellow", "value": 0.8},
+                      {"color": "green", "value": 0.9}
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "model_type",
+          "type": "query",
+          "query": "label_values(model_prediction_accuracy, model_type)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    }
+  }
+}
+
+

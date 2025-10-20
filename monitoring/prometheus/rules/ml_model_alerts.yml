@@ -1,0 +1,226 @@
+# ML Model Alerting Rules for Aquaculture ML Platform
+groups:
+  - name: ml_model_alerts
+    rules:
+      # Fish Classification Model Alerts
+      - alert: FishClassificationAccuracyDrop
+        expr: |
+          model_prediction_accuracy{model_type="fish_classification"} < 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: ml
+          model: fish_classification
+          team: ml-ops
+        annotations:
+          summary: "Fish classification model accuracy dropped significantly"
+          description: "Fish classification accuracy is {{ $value | humanizePercentage }}, below 85% threshold for 10 minutes."
+          runbook_url: "https://wiki.company.com/runbooks/fish-classification-accuracy"
+          dashboard_url: "http://grafana:3000/d/ml-models"
+
+      - alert: FishClassificationHighUncertainty
+        expr: |
+          avg_over_time(model_prediction_uncertainty{model_type="fish_classification"}[5m]) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+          component: ml
+          model: fish_classification
+          team: ml-ops
+        annotations:
+          summary: "Fish classification model showing high uncertainty"
+          description: "Average prediction uncertainty is {{ $value }}, above 0.3 threshold."
+
+      - alert: FishClassificationPredictionLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(model_prediction_duration_seconds_bucket{model_type="fish_classification"}[5m])
+          ) > 1.0
+        for: 3m
+        labels:
+          severity: warning
+          component: ml
+          model: fish_classification
+          team: ml-ops
+        annotations:
+          summary: "Fish classification prediction latency high"
+          description: "95th percentile prediction time is {{ $value }}s, above 1s threshold."
+
+      # Health Assessment Model Alerts
+      - alert: HealthAssessmentAccuracyDrop
+        expr: |
+          model_prediction_accuracy{model_type="health_assessment"} < 0.80
+        for: 15m
+        labels:
+          severity: warning
+          component: ml
+          model: health_assessment
+          team: ml-ops
+        annotations:
+          summary: "Health assessment model accuracy dropped"
+          description: "Health assessment accuracy is {{ $value | humanizePercentage }}, below 80% threshold."
+
+      - alert: HealthAssessmentHighFalsePositives
+        expr: |
+          model_false_positive_rate{model_type="health_assessment"} > 0.15
+        for: 10m
+        labels:
+          severity: warning
+          component: ml
+          model: health_assessment
+          team: ml-ops
+        annotations:
+          summary: "Health assessment model high false positive rate"
+          description: "False positive rate is {{ $value | humanizePercentage }}, above 15% threshold."
+
+      # Model Serving Infrastructure
+      - alert: MLServiceDown
+        expr: up{job="aquaculture-ml-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "ML service is down"
+          description: "ML inference service is not responding"
+
+      - alert: MLServiceHighLatency
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{job="aquaculture-ml-service"}[5m])
+          ) > 5.0
+        for: 5m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "ML service high latency"
+          description: "95th percentile response time is {{ $value }}s for ML service"
+
+      - alert: MLServiceHighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{job="aquaculture-ml-service",status=~"5.."}[5m]) /
+            rate(http_requests_total{job="aquaculture-ml-service"}[5m])
+          ) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "ML service high error rate"
+          description: "ML service error rate is {{ $value | humanizePercentage }}"
+
+      # Model Performance Monitoring
+      - alert: ModelDriftDetected
+        expr: |
+          model_drift_score{model_type=~".*"} > 0.7
+        for: 30m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Model drift detected for {{ $labels.model_type }}"
+          description: "Drift score is {{ $value }}, indicating potential model degradation."
+          runbook_url: "https://wiki.company.com/runbooks/model-drift"
+
+      - alert: ModelPredictionVolumeAnomaly
+        expr: |
+          (
+            rate(model_predictions_total[5m]) < 
+            (avg_over_time(rate(model_predictions_total[5m])[1h:5m]) * 0.5)
+          ) or (
+            rate(model_predictions_total[5m]) > 
+            (avg_over_time(rate(model_predictions_total[5m])[1h:5m]) * 2.0)
+          )
+        for: 10m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Unusual prediction volume for {{ $labels.model_type }}"
+          description: "Prediction rate is {{ $value }}/sec, significantly different from normal patterns."
+
+      # Data Quality Alerts
+      - alert: InputDataQualityIssue
+        expr: |
+          data_quality_score{stage="input"} < 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Input data quality issues detected"
+          description: "Data quality score is {{ $value }}, below 0.8 threshold."
+
+      - alert: MissingFeatures
+        expr: |
+          feature_missing_rate > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "High rate of missing features"
+          description: "{{ $value | humanizePercentage }} of features are missing for {{ $labels.feature_name }}"
+
+      # Model Training Alerts
+      - alert: ModelTrainingFailed
+        expr: |
+          increase(model_training_failures_total[1h]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Model training failed"
+          description: "Model training for {{ $labels.model_type }} has failed"
+
+      - alert: ModelTrainingStalled
+        expr: |
+          time() - model_last_training_timestamp > 86400  # 24 hours
+        for: 0s
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Model training overdue"
+          description: "Model {{ $labels.model_type }} hasn't been retrained in over 24 hours"
+
+      # Resource Usage for ML Workloads
+      - alert: MLServiceHighMemoryUsage
+        expr: |
+          (
+            container_memory_usage_bytes{name=~".*ml.*"} / 
+            container_spec_memory_limit_bytes{name=~".*ml.*"}
+          ) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "ML service high memory usage"
+          description: "ML service memory usage is {{ $value }}%"
+
+      - alert: GPUUtilizationLow
+        expr: |
+          nvidia_gpu_utilization < 20
+        for: 30m
+        labels:
+          severity: info
+          component: ml
+          team: ml-ops
+        annotations:
+          summary: "Low GPU utilization"
+          description: "GPU utilization is {{ $value }}% on {{ $labels.instance }}"
+

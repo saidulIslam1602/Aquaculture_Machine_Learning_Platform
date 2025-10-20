@@ -1,0 +1,204 @@
+# Filebeat Configuration for Aquaculture ML Platform
+# Collects and ships logs from various sources
+
+# Global settings
+name: aquaculture-filebeat
+tags: ["aquaculture", "production", "ml-platform"]
+
+# Filebeat inputs
+filebeat.inputs:
+# Docker container logs
+- type: container
+  enabled: true
+  paths:
+    - '/var/lib/docker/containers/*/*.log'
+  
+  # Multiline pattern for stack traces
+  multiline.pattern: '^\d{4}-\d{2}-\d{2}'
+  multiline.negate: true
+  multiline.match: after
+  multiline.max_lines: 500
+  multiline.timeout: 5s
+  
+  # Processors to enrich logs
+  processors:
+    - add_docker_metadata:
+        host: "unix:///var/run/docker.sock"
+    - decode_json_fields:
+        fields: ["message"]
+        target: ""
+        overwrite_keys: true
+    - add_fields:
+        target: ''
+        fields:
+          log_source: docker
+          environment: production
+          platform: aquaculture-ml
+
+# Application log files
+- type: log
+  enabled: true
+  paths:
+    - /var/log/aquaculture/*.log
+    - /var/log/aquaculture/*/*.log
+  
+  # Include specific log levels
+  include_lines: ['ERROR', 'WARN', 'INFO', 'DEBUG']
+  
+  # Exclude health check logs to reduce noise
+  exclude_lines: ['/health', '/metrics', 'health_check']
+  
+  # Fields to add
+  fields:
+    log_source: application
+    component: api
+  fields_under_root: true
+  
+  # Multiline configuration for stack traces
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+  multiline.negate: true
+  multiline.match: after
+
+# System logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/syslog
+    - /var/log/auth.log
+    - /var/log/kern.log
+  
+  fields:
+    log_source: system
+    component: infrastructure
+  fields_under_root: true
+
+# Nginx access logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/nginx/access.log
+    - /var/log/nginx/error.log
+  
+  fields:
+    log_source: nginx
+    component: loadbalancer
+  fields_under_root: true
+
+# PostgreSQL logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/postgresql/*.log
+  
+  fields:
+    log_source: postgresql
+    component: database
+  fields_under_root: true
+  
+  # PostgreSQL specific multiline
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
+  multiline.negate: true
+  multiline.match: after
+
+# Redis logs
+- type: log
+  enabled: true
+  paths:
+    - /var/log/redis/*.log
+  
+  fields:
+    log_source: redis
+    component: cache
+  fields_under_root: true
+
+# Global processors
+processors:
+  # Add host information
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+      
+  # Add Kubernetes metadata if running in K8s
+  - add_kubernetes_metadata:
+      host: ${NODE_NAME}
+      matchers:
+      - logs_path:
+          logs_path: "/var/log/containers/"
+      
+  # Drop empty events
+  - drop_event:
+      when:
+        equals:
+          message: ""
+          
+  # Add timestamp
+  - timestamp:
+      field: "@timestamp"
+      layouts:
+        - '2006-01-02T15:04:05.000Z'
+        - '2006-01-02T15:04:05Z'
+      test:
+        - '2023-10-20T12:34:56.789Z'
+
+# Output configuration
+output.logstash:
+  hosts: ["logstash:5044"]
+  
+  # Load balancing
+  loadbalance: true
+  
+  # Compression
+  compression_level: 3
+  
+  # Bulk settings
+  bulk_max_size: 2048
+  
+  # Worker settings
+  worker: 2
+  
+  # Timeout settings
+  timeout: 30s
+
+# Alternative direct Elasticsearch output (comment out if using Logstash)
+# output.elasticsearch:
+#   hosts: ["elasticsearch:9200"]
+#   protocol: "http"
+#   username: "elastic"
+#   password: "changeme"
+#   
+#   # Index settings
+#   index: "filebeat-aquaculture-%{+yyyy.MM.dd}"
+#   
+#   # Template settings
+#   template.name: "filebeat-aquaculture"
+#   template.pattern: "filebeat-aquaculture-*"
+#   template.settings:
+#     index.number_of_shards: 1
+#     index.number_of_replicas: 1
+
+# Logging configuration
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: /var/log/filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# Monitoring
+monitoring.enabled: true
+monitoring.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+
+# HTTP endpoint for health checks
+http.enabled: true
+http.host: 0.0.0.0
+http.port: 5066
+
+# Performance tuning
+queue.mem:
+  events: 4096
+  flush.min_events: 512
+  flush.timeout: 1s
+
+# Registry file to track file positions
+filebeat.registry.path: /usr/share/filebeat/data/registry

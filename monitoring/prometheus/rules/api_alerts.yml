@@ -1,0 +1,153 @@
+# API Alerting Rules for Aquaculture ML Platform
+groups:
+  - name: api_alerts
+    rules:
+      # High-level API availability
+      - alert: APIDown
+        expr: up{job="aquaculture-api"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          component: api
+          team: platform
+          service: aquaculture-api
+        annotations:
+          summary: "Aquaculture API is down"
+          description: "The Aquaculture ML Platform API has been down for more than 30 seconds. This affects all system functionality."
+          runbook_url: "https://wiki.company.com/runbooks/api-down"
+          dashboard_url: "http://grafana:3000/d/api-overview"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{job="aquaculture-api",status=~"5.."}[5m]) /
+            rate(http_requests_total{job="aquaculture-api"}[5m])
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} which is above the 5% threshold."
+          runbook_url: "https://wiki.company.com/runbooks/high-error-rate"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m])
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "High API response time"
+          description: "95th percentile response time is {{ $value }}s, above 2s threshold."
+          runbook_url: "https://wiki.company.com/runbooks/high-latency"
+
+      # Rate limiting triggered
+      - alert: RateLimitingActive
+        expr: |
+          rate(http_requests_total{job="aquaculture-api",status="429"}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: info
+          component: api
+          team: platform
+        annotations:
+          summary: "Rate limiting is actively blocking requests"
+          description: "Rate limiting is blocking {{ $value }} requests per second."
+
+      # Low throughput
+      - alert: LowThroughput
+        expr: |
+          rate(http_requests_total{job="aquaculture-api"}[5m]) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "Unusually low API throughput"
+          description: "API is receiving only {{ $value }} requests per second, which is unusually low."
+
+      # Authentication failures
+      - alert: HighAuthFailureRate
+        expr: |
+          (
+            rate(http_requests_total{job="aquaculture-api",endpoint="/api/v1/auth/login",status="401"}[5m]) /
+            rate(http_requests_total{job="aquaculture-api",endpoint="/api/v1/auth/login"}[5m])
+          ) > 0.20
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: security
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failure rate is {{ $value | humanizePercentage }}, above 20% threshold."
+          runbook_url: "https://wiki.company.com/runbooks/auth-failures"
+
+      # Database connection issues
+      - alert: DatabaseConnectionErrors
+        expr: |
+          rate(database_connection_errors_total{job="aquaculture-api"}[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+          team: platform
+        annotations:
+          summary: "Database connection errors detected"
+          description: "API is experiencing {{ $value }} database connection errors per second."
+
+      # Memory usage high
+      - alert: APIHighMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes{job="aquaculture-api"} / 
+            (1024 * 1024 * 1024)
+          ) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "API service high memory usage"
+          description: "API service is using {{ $value }}GB of memory, above 1GB threshold."
+
+      # CPU usage high
+      - alert: APIHighCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total{job="aquaculture-api"}[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "API service high CPU usage"
+          description: "API service CPU usage is {{ $value }}%, above 80% threshold."
+
+      # File descriptor usage
+      - alert: APIHighFileDescriptorUsage
+        expr: |
+          (
+            process_open_fds{job="aquaculture-api"} /
+            process_max_fds{job="aquaculture-api"}
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+          team: platform
+        annotations:
+          summary: "API service high file descriptor usage"
+          description: "API service is using {{ $value | humanizePercentage }} of available file descriptors."
+

@@ -4,13 +4,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 import logging
+import time
 
 from .core.config import settings
 from .core.database import init_db
 from .core.redis_client import close_redis
 from .routes import auth, health, tasks, metrics
 from .routes.ml import inference as ml_inference
+from .utils.metrics import performance_metrics, get_business_metrics_endpoint
 from .middleware.error_handlers import (
     api_exception_handler,
     validation_exception_handler,
@@ -63,7 +66,31 @@ app.add_exception_handler(Exception, generic_exception_handler)
 
 # Setup Prometheus metrics
 if settings.PROMETHEUS_ENABLED:
-    Instrumentator().instrument(app).expose(app)
+    # Standard FastAPI instrumentation
+    instrumentator = Instrumentator(
+        should_group_status_codes=False,
+        should_ignore_untemplated=True,
+        should_respect_env_var=True,
+        should_instrument_requests_inprogress=True,
+        excluded_handlers=[".*admin.*", "/metrics"],
+        env_var_name="ENABLE_METRICS",
+        inprogress_name="inprogress",
+        inprogress_labels=True,
+    )
+    
+    # Add custom metrics collection
+    @instrumentator.add_middleware
+    def add_custom_metrics(request, response):
+        method = request.method
+        endpoint = str(request.url.path)
+        status_code = response.status_code
+        
+        # Record in our custom metrics collector
+        if hasattr(request.state, 'start_time'):
+            duration = time.time() - request.state.start_time
+            performance_metrics.record_api_request(method, endpoint, status_code, duration)
+    
+    instrumentator.instrument(app).expose(app)
 
 # Include routers
 app.include_router(health.router)
@@ -71,6 +98,22 @@ app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ml_inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(tasks.router, prefix=settings.API_V1_PREFIX)
 app.include_router(metrics.router, prefix=settings.API_V1_PREFIX)
+
+# Add custom business metrics endpoint
+@app.get("/business-metrics")
+async def business_metrics():
+    """Custom business metrics endpoint for Prometheus scraping"""
+    return get_business_metrics_endpoint()
+
+# Add middleware to track request timing
+@app.middleware("http")
+async def add_process_time_header(request, call_next):
+    start_time = time.time()
+    request.state.start_time = start_time
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
 
 
 @app.on_event("startup")

@@ -1,0 +1,321 @@
+# Enhanced Alertmanager Configuration for Aquaculture ML Platform
+global:
+  # SMTP configuration for email alerts
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@aquaculture-platform.com'
+  smtp_auth_username: 'alerts@aquaculture-platform.com'
+  smtp_auth_password: 'your-app-password'
+  smtp_require_tls: true
+
+  # Slack configuration
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+
+  # PagerDuty configuration
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+  # Default resolve timeout
+  resolve_timeout: 5m
+
+# Templates for alert notifications
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# Routing configuration
+route:
+  group_by: ['alertname', 'cluster', 'service', 'severity']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  receiver: 'default'
+  
+  routes:
+    # Critical alerts - immediate notification to all channels
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 0s
+      repeat_interval: 5m
+      continue: true
+      
+    # Security alerts - immediate security team notification
+    - match:
+        component: security
+      receiver: 'security-team'
+      group_wait: 0s
+      repeat_interval: 15m
+      group_by: ['alertname', 'attack_type', 'source_ip']
+      continue: true
+      
+    # API alerts - platform team
+    - match:
+        component: api
+      receiver: 'platform-team'
+      group_by: ['alertname', 'endpoint', 'status']
+      routes:
+        # High priority API alerts
+        - match:
+            severity: critical
+          receiver: 'platform-team-urgent'
+          repeat_interval: 5m
+      
+    # ML/AI alerts - ML operations team
+    - match:
+        component: ml
+      receiver: 'ml-ops-team'
+      group_by: ['alertname', 'model', 'model_type']
+      routes:
+        # Model performance degradation
+        - match_re:
+            alertname: '.*Accuracy.*|.*Drift.*'
+          receiver: 'ml-ops-team-models'
+          repeat_interval: 30m
+        # ML infrastructure issues
+        - match_re:
+            alertname: '.*Service.*|.*Latency.*'
+          receiver: 'ml-ops-team-infra'
+          repeat_interval: 10m
+      
+    # Business alerts - operations team
+    - match:
+        component: business
+      receiver: 'operations-team'
+      group_by: ['alertname', 'kpi', 'tank_id']
+      routes:
+        # Critical business alerts (mortality, compliance)
+        - match_re:
+            alertname: '.*Mortality.*|.*Compliance.*'
+          receiver: 'operations-team-urgent'
+          repeat_interval: 15m
+        # Production and efficiency alerts
+        - match_re:
+            alertname: '.*Production.*|.*Efficiency.*'
+          receiver: 'operations-team-production'
+          repeat_interval: 1h
+      
+    # Infrastructure alerts - platform team
+    - match:
+        component: infrastructure
+      receiver: 'platform-team-infra'
+      group_by: ['alertname', 'instance', 'device']
+      routes:
+        # Database alerts
+        - match_re:
+            alertname: '.*PostgreSQL.*|.*Redis.*'
+          receiver: 'database-team'
+          repeat_interval: 10m
+        # Container and Kubernetes alerts
+        - match_re:
+            alertname: '.*Container.*|.*Pod.*|.*Kubernetes.*'
+          receiver: 'platform-team-k8s'
+          repeat_interval: 15m
+      
+    # SLA alerts - management and platform team
+    - match:
+        component: sla
+      receiver: 'sla-management'
+      group_by: ['alertname', 'sla_type']
+      repeat_interval: 30m
+      continue: true
+      
+    # Maintenance window - suppress non-critical alerts
+    - match:
+        maintenance: 'true'
+      receiver: 'null'
+      group_wait: 0s
+
+# Inhibition rules to reduce alert noise
+inhibit_rules:
+  # If API is down, don't alert on high response times
+  - source_match:
+      alertname: 'APIDown'
+    target_match:
+      component: 'api'
+    target_match_re:
+      alertname: '.*Latency.*|.*ResponseTime.*'
+    equal: ['job', 'instance']
+
+  # If ML service is down, don't alert on model performance
+  - source_match:
+      alertname: 'MLServiceDown'
+    target_match:
+      component: 'ml'
+    target_match_re:
+      alertname: '.*Accuracy.*|.*Latency.*'
+    equal: ['job', 'instance']
+
+  # If database is down, don't alert on connection errors
+  - source_match_re:
+      alertname: '.*Down'
+      component: 'database'
+    target_match:
+      component: 'api'
+    target_match_re:
+      alertname: '.*Database.*|.*Connection.*'
+    equal: ['instance']
+
+  # If system is under maintenance, suppress infrastructure alerts
+  - source_match:
+      maintenance: 'true'
+    target_match:
+      component: 'infrastructure'
+    target_match_re:
+      severity: 'warning'
+
+# Receiver configurations
+receivers:
+  # Default receiver
+  - name: 'default'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#alerts-general'
+        title: 'Aquaculture Platform Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  # Critical alerts - all channels
+  - name: 'critical-alerts'
+    email_configs:
+      - to: 'oncall@aquaculture-platform.com'
+        subject: 'CRITICAL: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Severity: {{ .Labels.severity }}
+          Time: {{ .StartsAt }}
+          {{ if .Annotations.runbook_url }}Runbook: {{ .Annotations.runbook_url }}{{ end }}
+          {{ if .Annotations.dashboard_url }}Dashboard: {{ .Annotations.dashboard_url }}{{ end }}
+          {{ end }}
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#alerts-critical'
+        title: '🚨 CRITICAL ALERT'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          {{ .Annotations.description }}
+          {{ end }}
+        color: 'danger'
+    pagerduty_configs:
+      - routing_key: 'your-pagerduty-integration-key'
+        description: '{{ .GroupLabels.alertname }}'
+
+  # Security team
+  - name: 'security-team'
+    email_configs:
+      - to: 'security@aquaculture-platform.com'
+        subject: '🔒 Security Alert: {{ .GroupLabels.alertname }}'
+        body: |
+          {{ range .Alerts }}
+          Security Alert: {{ .Annotations.summary }}
+          Attack Type: {{ .Labels.attack_type }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt }}
+          {{ if .Labels.source_ip }}Source IP: {{ .Labels.source_ip }}{{ end }}
+          {{ end }}
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#security-alerts'
+        title: '🔒 Security Alert'
+        text: |
+          {{ range .Alerts }}
+          *{{ .Annotations.summary }}*
+          Attack Type: {{ .Labels.attack_type }}
+          {{ .Annotations.description }}
+          {{ end }}
+        color: 'warning'
+
+  # Platform team
+  - name: 'platform-team'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#platform-alerts'
+        title: 'Platform Alert'
+        text: |
+          {{ range .Alerts }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # Platform team urgent
+  - name: 'platform-team-urgent'
+    email_configs:
+      - to: 'platform-oncall@aquaculture-platform.com'
+        subject: 'URGENT Platform Alert: {{ .GroupLabels.alertname }}'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#platform-urgent'
+        title: '🚨 Urgent Platform Alert'
+        color: 'danger'
+
+  # ML Operations team
+  - name: 'ml-ops-team'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#ml-ops-alerts'
+        title: 'ML Operations Alert'
+        text: |
+          {{ range .Alerts }}
+          Model: {{ .Labels.model_type }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # ML Ops - Model Performance
+  - name: 'ml-ops-team-models'
+    email_configs:
+      - to: 'ml-team@aquaculture-platform.com'
+        subject: 'Model Performance Alert: {{ .GroupLabels.alertname }}'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#ml-model-alerts'
+        title: '📊 Model Performance Alert'
+        color: 'warning'
+
+  # Operations team
+  - name: 'operations-team'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#operations-alerts'
+        title: 'Operations Alert'
+        text: |
+          {{ range .Alerts }}
+          KPI: {{ .Labels.kpi }}
+          {{ .Annotations.summary }}
+          {{ .Annotations.description }}
+          {{ end }}
+
+  # Operations urgent
+  - name: 'operations-team-urgent'
+    email_configs:
+      - to: 'operations-oncall@aquaculture-platform.com'
+        subject: 'URGENT Operations Alert: {{ .GroupLabels.alertname }}'
+    pagerduty_configs:
+      - routing_key: 'operations-pagerduty-key'
+
+  # Database team
+  - name: 'database-team'
+    slack_configs:
+      - api_url: '{{ template "slack.default.api_url" . }}'
+        channel: '#database-alerts'
+        title: 'Database Alert'
+
+  # SLA Management
+  - name: 'sla-management'
+    email_configs:
+      - to: 'management@aquaculture-platform.com'
+        subject: 'SLA Breach: {{ .GroupLabels.alertname }}'
+        body: |
+          SLA Breach Detected
+          
+          {{ range .Alerts }}
+          SLA Type: {{ .Labels.sla_type }}
+          Alert: {{ .Annotations.summary }}
+          Description: {{ .Annotations.description }}
+          Time: {{ .StartsAt }}
+          {{ if .Annotations.dashboard_url }}Dashboard: {{ .Annotations.dashboard_url }}{{ end }}
+          {{ end }}
+
+  # Null receiver for maintenance windows
+  - name: 'null'
+
+

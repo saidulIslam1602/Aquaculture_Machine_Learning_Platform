@@ -1,0 +1,236 @@
+# Business Metrics Alerting Rules for Aquaculture ML Platform
+groups:
+  - name: business_kpi_alerts
+    rules:
+      # Fish Health Monitoring KPIs
+      - alert: HighMortalityRateDetected
+        expr: |
+          business_fish_mortality_rate > 0.05
+        for: 15m
+        labels:
+          severity: critical
+          component: business
+          kpi: mortality
+          team: operations
+        annotations:
+          summary: "High fish mortality rate detected"
+          description: "Fish mortality rate is {{ $value | humanizePercentage }}, above 5% threshold."
+          runbook_url: "https://wiki.company.com/runbooks/high-mortality"
+          dashboard_url: "http://grafana:3000/d/business-kpis"
+
+      - alert: FeedConversionRatioHigh
+        expr: |
+          business_feed_conversion_ratio > 1.8
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+          kpi: fcr
+          team: operations
+        annotations:
+          summary: "Feed conversion ratio above optimal range"
+          description: "FCR is {{ $value }}, above 1.8 optimal threshold."
+          runbook_url: "https://wiki.company.com/runbooks/fcr-optimization"
+
+      - alert: WaterQualityDegradation
+        expr: |
+          business_water_quality_score < 0.8
+        for: 10m
+        labels:
+          severity: warning
+          component: business
+          kpi: water_quality
+          team: operations
+        annotations:
+          summary: "Water quality below acceptable levels"
+          description: "Water quality score is {{ $value }}, below 0.8 threshold."
+
+      # Production Performance KPIs
+      - alert: ProductionTargetMissed
+        expr: |
+          business_daily_production_kg < business_daily_production_target_kg * 0.9
+        for: 60m
+        labels:
+          severity: warning
+          component: business
+          kpi: production
+          team: operations
+        annotations:
+          summary: "Daily production target missed"
+          description: "Production is {{ $value }}kg, below 90% of target."
+
+      - alert: GrowthRateBelowTarget
+        expr: |
+          business_average_growth_rate_grams_per_day < 15
+        for: 24h  # Daily measurement
+        labels:
+          severity: warning
+          component: business
+          kpi: growth
+          team: operations
+        annotations:
+          summary: "Fish growth rate below target"
+          description: "Average growth rate is {{ $value }}g/day, below 15g/day target."
+
+      # System Performance KPIs
+      - alert: PredictionAccuracyBelowSLA
+        expr: |
+          business_prediction_accuracy_sla < 0.90
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+          kpi: ml_performance
+          team: ml-ops
+        annotations:
+          summary: "ML prediction accuracy below SLA"
+          description: "Prediction accuracy SLA is {{ $value | humanizePercentage }}, below 90% target."
+
+      - alert: SystemUptimeBelowSLA
+        expr: |
+          business_system_uptime_percentage < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          component: business
+          kpi: uptime
+          team: platform
+        annotations:
+          summary: "System uptime below SLA"
+          description: "System uptime is {{ $value | humanizePercentage }}, below 99.9% SLA."
+
+      # Cost and Efficiency KPIs
+      - alert: OperationalCostSpike
+        expr: |
+          business_daily_operational_cost_usd > business_daily_cost_budget_usd * 1.2
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+          kpi: cost
+          team: finance
+        annotations:
+          summary: "Operational costs exceed budget"
+          description: "Daily costs are ${{ $value }}, 20% above budget."
+
+      - alert: EnergyEfficiencyDrop
+        expr: |
+          business_energy_efficiency_kwh_per_kg > 8.0
+        for: 60m
+        labels:
+          severity: warning
+          component: business
+          kpi: efficiency
+          team: operations
+        annotations:
+          summary: "Energy efficiency below target"
+          description: "Energy usage is {{ $value }} kWh/kg, above 8.0 kWh/kg target."
+
+      # Customer and Quality KPIs
+      - alert: QualityGradeDropped
+        expr: |
+          business_average_quality_grade < 4.0
+        for: 120m
+        labels:
+          severity: warning
+          component: business
+          kpi: quality
+          team: quality_assurance
+        annotations:
+          summary: "Product quality grade below standard"
+          description: "Average quality grade is {{ $value }}, below 4.0 standard."
+
+      - alert: CustomerSatisfactionLow
+        expr: |
+          business_customer_satisfaction_score < 4.2
+        for: 24h
+        labels:
+          severity: warning
+          component: business
+          kpi: satisfaction
+          team: customer_success
+        annotations:
+          summary: "Customer satisfaction below target"
+          description: "Customer satisfaction is {{ $value }}/5, below 4.2 target."
+
+      # Environmental and Compliance KPIs
+      - alert: EnvironmentalComplianceIssue
+        expr: |
+          business_environmental_compliance_score < 0.95
+        for: 15m
+        labels:
+          severity: critical
+          component: business
+          kpi: compliance
+          team: compliance
+        annotations:
+          summary: "Environmental compliance issue detected"
+          description: "Compliance score is {{ $value | humanizePercentage }}, below 95% requirement."
+
+      - alert: WasteDischargeExceedsLimit
+        expr: |
+          business_waste_discharge_rate_kg_per_hour > 50
+        for: 30m
+        labels:
+          severity: critical
+          component: business
+          kpi: environmental
+          team: operations
+        annotations:
+          summary: "Waste discharge exceeds regulatory limits"
+          description: "Waste discharge is {{ $value }}kg/h, above 50kg/h limit."
+
+      # Predictive Maintenance KPIs
+      - alert: EquipmentFailurePredicted
+        expr: |
+          business_equipment_failure_probability > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: business
+          kpi: maintenance
+          team: maintenance
+        annotations:
+          summary: "High probability of equipment failure predicted"
+          description: "Equipment {{ $labels.equipment_id }} has {{ $value | humanizePercentage }} failure probability."
+
+      - alert: MaintenanceOverdue
+        expr: |
+          business_days_since_last_maintenance > business_maintenance_interval_days
+        for: 0s
+        labels:
+          severity: warning
+          component: business
+          kpi: maintenance
+          team: maintenance
+        annotations:
+          summary: "Equipment maintenance overdue"
+          description: "Equipment {{ $labels.equipment_id }} maintenance is {{ $value }} days overdue."
+
+      # Data Quality and System Health
+      - alert: DataIngestionRateDropped
+        expr: |
+          rate(business_data_points_ingested_total[5m]) < 100
+        for: 10m
+        labels:
+          severity: warning
+          component: business
+          kpi: data_quality
+          team: platform
+        annotations:
+          summary: "Data ingestion rate below normal"
+          description: "Data ingestion rate is {{ $value }}/sec, below 100/sec normal rate."
+
+      - alert: SensorMalfunctionDetected
+        expr: |
+          business_sensor_malfunction_count > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: business
+          kpi: sensors
+          team: operations
+        annotations:
+          summary: "Sensor malfunction detected"
+          description: "{{ $value }} sensors are malfunctioning in {{ $labels.tank_id }}."
+

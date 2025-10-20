@@ -1,0 +1,378 @@
+# Enhanced ServiceMonitor Configuration for Aquaculture ML Platform
+# Production-grade Kubernetes-native monitoring with Prometheus Operator
+
+---
+# Comprehensive API Service Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-api-enhanced
+  namespace: aquaculture-prod
+  labels:
+    app: aquaculture-api
+    component: api
+    tier: backend
+    prometheus: kube-prometheus
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: api-service
+      tier: backend
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    scheme: http
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service_name
+    - sourceLabels: [__meta_kubernetes_pod_ip]
+      targetLabel: pod_ip
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'http_.*|fastapi_.*|api_.*'
+      targetLabel: component
+      replacement: 'api'
+    - sourceLabels: [__name__]
+      regex: 'process_.*'
+      targetLabel: component
+      replacement: 'system'
+
+---
+# Business Metrics Endpoint Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-business-metrics
+  namespace: aquaculture-prod
+  labels:
+    app: aquaculture-business
+    component: business
+    tier: metrics
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: api-service
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: http
+    path: /business-metrics
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'business_.*'
+      targetLabel: component
+      replacement: 'business'
+    - sourceLabels: [__name__]
+      regex: 'kpi_.*'
+      targetLabel: metric_type
+      replacement: 'kpi'
+
+---
+# ML Service Enhanced Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-ml-enhanced
+  namespace: aquaculture-prod
+  labels:
+    app: aquaculture-ml
+    component: ml
+    tier: ml-service
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: ml-service
+      tier: ml
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 10s
+    scrapeTimeout: 15s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_phase]
+      targetLabel: pod_phase
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'model_.*|ml_.*|inference_.*'
+      targetLabel: component
+      replacement: 'ml'
+    - sourceLabels: [__name__]
+      regex: 'gpu_.*|cuda_.*'
+      targetLabel: component
+      replacement: 'gpu'
+
+---
+# PodMonitor for Direct Pod Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: aquaculture-pods-enhanced
+  namespace: aquaculture-prod
+  labels:
+    prometheus: kube-prometheus
+    component: pods
+spec:
+  selector:
+    matchLabels:
+      monitoring: enabled
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_pod_phase]
+      targetLabel: pod_phase
+    - sourceLabels: [__meta_kubernetes_pod_ready_condition]
+      targetLabel: pod_ready
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      targetLabel: container_name
+    - sourceLabels: [__meta_kubernetes_pod_container_port_number]
+      targetLabel: container_port
+
+---
+# Infrastructure Components Monitor
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-infrastructure
+  namespace: aquaculture-prod
+  labels:
+    app: infrastructure
+    component: infrastructure
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      component: infrastructure
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+    - kube-system
+    - monitoring
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'node_.*'
+      targetLabel: component
+      replacement: 'node'
+    - sourceLabels: [__name__]
+      regex: 'container_.*|cadvisor_.*'
+      targetLabel: component
+      replacement: 'container'
+
+---
+# Database Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-database
+  namespace: aquaculture-prod
+  labels:
+    app: database
+    component: database
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: postgres-exporter
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'pg_.*'
+      targetLabel: component
+      replacement: 'database'
+    - sourceLabels: [__name__]
+      regex: 'postgresql_.*'
+      targetLabel: component
+      replacement: 'database'
+
+---
+# Cache (Redis) Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-cache
+  namespace: aquaculture-prod
+  labels:
+    app: cache
+    component: cache
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: redis-exporter
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'redis_.*'
+      targetLabel: component
+      replacement: 'cache'
+
+---
+# Message Queue (Kafka) Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-messaging
+  namespace: aquaculture-prod
+  labels:
+    app: messaging
+    component: messaging
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: kafka-exporter
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'kafka_.*'
+      targetLabel: component
+      replacement: 'messaging'
+
+---
+# Jaeger Tracing Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aquaculture-tracing
+  namespace: aquaculture-prod
+  labels:
+    app: tracing
+    component: tracing
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+  namespaceSelector:
+    matchNames:
+    - aquaculture-prod
+  endpoints:
+  - port: admin-http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'jaeger_.*'
+      targetLabel: component
+      replacement: 'tracing'
+
+---
+# Prometheus Self-Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-self-monitor
+  namespace: monitoring
+  labels:
+    app: prometheus
+    component: prometheus
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  namespaceSelector:
+    matchNames:
+    - monitoring
+  endpoints:
+  - port: web
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+
+---
+# Grafana Monitoring
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grafana-monitor
+  namespace: monitoring
+  labels:
+    app: grafana
+    component: grafana
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  namespaceSelector:
+    matchNames:
+    - monitoring
+  endpoints:
+  - port: service
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'grafana_.*'
+      targetLabel: component
+      replacement: 'grafana'
