@@ -77,19 +77,21 @@ if settings.PROMETHEUS_ENABLED:
         inprogress_name="inprogress",
         inprogress_labels=True,
     )
-    
+
     # Add custom metrics collection
     @instrumentator.add_middleware
     def add_custom_metrics(request, response):
         method = request.method
         endpoint = str(request.url.path)
         status_code = response.status_code
-        
+
         # Record in our custom metrics collector
-        if hasattr(request.state, 'start_time'):
+        if hasattr(request.state, "start_time"):
             duration = time.time() - request.state.start_time
-            performance_metrics.record_api_request(method, endpoint, status_code, duration)
-    
+            performance_metrics.record_api_request(
+                method, endpoint, status_code, duration
+            )
+
     instrumentator.instrument(app).expose(app)
 
 # Include routers
@@ -99,11 +101,13 @@ app.include_router(ml_inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(tasks.router, prefix=settings.API_V1_PREFIX)
 app.include_router(metrics.router, prefix=settings.API_V1_PREFIX)
 
+
 # Add custom business metrics endpoint
 @app.get("/business-metrics")
 async def business_metrics():
     """Custom business metrics endpoint for Prometheus scraping"""
     return get_business_metrics_endpoint()
+
 
 # Add middleware to track request timing
 @app.middleware("http")
