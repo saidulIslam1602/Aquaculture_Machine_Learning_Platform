@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..core.config import settings
 from ..core.database import get_db
-from ..core.security import (create_access_token, get_password_hash,
-                             verify_password)
+from ..core.security import create_access_token, get_password_hash, verify_password
 from ..models.user import User
 from ..schemas.user import Token, UserCreate, UserResponse
 

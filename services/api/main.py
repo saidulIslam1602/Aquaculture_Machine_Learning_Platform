@@ -13,10 +13,13 @@ from sqlalchemy.exc import SQLAlchemyError
 from .core.config import settings
 from .core.database import init_db
 from .core.redis_client import close_redis
-from .middleware.error_handlers import (APIException, api_exception_handler,
-                                        database_exception_handler,
-                                        generic_exception_handler,
-                                        validation_exception_handler)
+from .middleware.error_handlers import (
+    APIException,
+    api_exception_handler,
+    database_exception_handler,
+    generic_exception_handler,
+    validation_exception_handler,
+)
 from .middleware.logging_middleware import RequestLoggingMiddleware
 from .middleware.rate_limiter import RateLimitMiddleware
 from .routes import auth, health, metrics, tasks
