@@ -1,28 +1,59 @@
+# ============================================================================
+# Python Project Configuration for Aquaculture ML Platform
+# ============================================================================
+# 
+# This pyproject.toml file configures development tools and build settings
+# for the Aquaculture Machine Learning Platform. It follows PEP 518/621
+# standards for modern Python project configuration.
+#
+# CONFIGURED TOOLS:
+# - Black: Code formatter for consistent Python styling
+# - isort: Import statement organizer and formatter
+# - pytest: Test runner configuration (if needed)
+# - mypy: Static type checker configuration (if needed)
+#
+# USAGE:
+# - Developers should run `black .` and `isort .` before committing
+# - CI/CD pipeline uses these configurations for automated code quality checks
+# - IDE integrations can use these settings for real-time formatting
+# ============================================================================
+
+# ============================================================================
+# IMPORT SORTING CONFIGURATION (isort)
+# ============================================================================
+# Organizes Python imports according to PEP 8 and Black compatibility
+
 [tool.isort]
-profile = "black"
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-line_length = 88
+profile = "black"                        # Use Black-compatible import formatting
+multi_line_output = 3                    # Vertical hanging indent style
+include_trailing_comma = true            # Add trailing comma for better git diffs
+force_grid_wrap = 0                      # Don't force grid wrapping
+use_parentheses = true                   # Use parentheses for multi-line imports
+ensure_newline_before_comments = true    # Add newline before import comments
+line_length = 88                         # Match Black's line length
+
+# ============================================================================
+# CODE FORMATTING CONFIGURATION (Black)
+# ============================================================================
+# Maintains consistent Python code style across the entire project
 
 [tool.black]
-line-length = 88
-target-version = ['py310']
-include = '\.pyi?$'
+line-length = 88                         # Standard line length for readability
+target-version = ['py310']               # Target Python 3.10+ syntax features
+include = '\.pyi?$'                      # Include .py and .pyi files
 extend-exclude = '''
 /(
-  # directories
-  \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
+  # Exclude common build and cache directories
+  \.eggs          # Setuptools egg metadata
+  | \.git         # Git version control
+  | \.hg          # Mercurial version control
+  | \.mypy_cache  # MyPy type checker cache
+  | \.tox         # Tox virtual environments
+  | \.venv        # Virtual environments
+  | _build        # Sphinx documentation build
+  | buck-out      # Buck build system output
+  | build         # Python build artifacts
+  | dist          # Distribution packages
 )/
 '''
+

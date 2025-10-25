@@ -1,117 +1,208 @@
+# ============================================================================
+# Docker Compose Configuration for Aquaculture ML Platform
+# ============================================================================
+# 
+# This docker-compose file orchestrates a complete aquaculture machine learning
+# platform with the following architecture:
+#
+# CORE SERVICES:
+# - API Service (FastAPI) - REST API with authentication and ML endpoints
+# - ML Service (PyTorch) - Machine learning inference engine
+# - Worker Service (Celery) - Asynchronous task processing
+# - Frontend (React/Vite) - User interface and dashboard
+#
+# DATA LAYER:
+# - PostgreSQL - Primary relational database for structured data
+# - Redis - Caching layer and message broker for Celery
+# - Kafka - Event streaming platform for real-time data processing
+#
+# MONITORING STACK:
+# - Prometheus - Time-series database for metrics collection
+# - Grafana - Visualization and alerting dashboard
+# - Alertmanager - Alert routing and management
+# - Jaeger - Distributed tracing for request tracking
+# - Node Exporter - System-level metrics collection
+# - cAdvisor - Container metrics collection
+# - Redis/Postgres Exporters - Database-specific metrics
+#
+# NETWORKING:
+# - All services communicate through 'aquaculture-network' bridge network
+# - Health checks ensure proper service startup dependencies
+# - Volume mounts enable data persistence and development hot-reloading
+#
+# SECURITY CONSIDERATIONS:
+# - Non-standard ports used to avoid conflicts (Redis: 6380 vs 6379)
+# - Health checks prevent cascading failures
+# - Restart policies ensure service availability
+# - Secrets should be managed via .env files in production
+#
+# DEVELOPMENT FEATURES:
+# - Volume mounts for hot-reloading during development
+# - Comprehensive logging and monitoring from day one
+# - GPU support ready for ML workloads (commented out)
+# ============================================================================
+
 version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # ========================================================================
+  # DATA PERSISTENCE LAYER
+  # ========================================================================
+  
+  # PostgreSQL Database - Primary data store for structured data
+  # Handles user accounts, prediction results, model metadata, audit logs
   postgres:
-    image: postgres:15-alpine
+    image: postgres:15-alpine  # Alpine Linux for smaller image size
     container_name: aquaculture-postgres
     environment:
+      # Database credentials - should be externalized to .env in production
       POSTGRES_USER: aquaculture
-      POSTGRES_PASSWORD: aquaculture123
+      POSTGRES_PASSWORD: aquaculture123  # TODO: Use secrets management
       POSTGRES_DB: aquaculture_db
     ports:
-      - "5432:5432"
+      - "5432:5432"  # Standard PostgreSQL port
     volumes:
+      # Persistent data storage - survives container restarts
       - postgres_data:/var/lib/postgresql/data
+      # Database initialization script for extensions and schema
       - ./infrastructure/docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
+      # Health check ensures database is ready before dependent services start
       test: ["CMD-SHELL", "pg_isready -U aquaculture"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 10s    # Check every 10 seconds
+      timeout: 5s      # Timeout after 5 seconds
+      retries: 5       # Retry 5 times before marking as unhealthy
     networks:
       - aquaculture-network
+    restart: unless-stopped  # Auto-restart on failure
 
-  # Redis Cache
+  # Redis Cache and Message Broker
+  # Serves dual purpose: caching layer for API responses and Celery message broker
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine  # Latest stable Redis with Alpine Linux
     container_name: aquaculture-redis
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes  # Enable persistence with AOF
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Non-standard port to avoid conflicts with local Redis
     volumes:
+      # Persistent storage for Redis data (AOF and RDB files)
       - redis_data:/data
     healthcheck:
+      # Simple ping test to verify Redis is responding
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - aquaculture-network
+    restart: unless-stopped
 
-  # Kafka (with Zookeeper)
+  # ========================================================================
+  # MESSAGE STREAMING LAYER
+  # ========================================================================
+  
+  # Apache Zookeeper - Coordination service for Kafka cluster
+  # Manages Kafka broker metadata, partition leadership, and configuration
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: aquaculture-zookeeper
     environment:
+      # Zookeeper client port for Kafka connections
       ZOOKEEPER_CLIENT_PORT: 2181
+      # Basic time unit in milliseconds used by Zookeeper for heartbeats
       ZOOKEEPER_TICK_TIME: 2000
     networks:
       - aquaculture-network
 
+  # Apache Kafka - Distributed event streaming platform
+  # Handles real-time data feeds from IoT sensors, user actions, and system events
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: aquaculture-kafka
     depends_on:
-      - zookeeper
+      - zookeeper  # Kafka requires Zookeeper for coordination
     ports:
-      - "9092:9092"
+      - "9092:9092"  # Kafka broker port
     environment:
+      # Unique broker identifier in the Kafka cluster
       KAFKA_BROKER_ID: 1
+      # Zookeeper connection string for cluster coordination
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # How clients should connect to this broker
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      # Replication factor for offset topic (1 for single-node development)
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      # Automatically create topics when producers/consumers reference them
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
       - aquaculture-network
 
-  # API Service
+  # ========================================================================
+  # APPLICATION SERVICES LAYER
+  # ========================================================================
+
+  # FastAPI Application Service - Main REST API
+  # Handles authentication, CRUD operations, ML prediction requests
   api:
     build:
-      context: .
+      context: .  # Build context from project root
       dockerfile: infrastructure/docker/Dockerfile.api
     container_name: aquaculture-api
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy  # Wait for database to be ready
       redis:
-        condition: service_healthy
+        condition: service_healthy  # Wait for cache to be ready
     ports:
-      - "8000:8000"
+      - "8000:8000"  # FastAPI default port
     environment:
+      # Database connection string with service-to-service communication
       - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      # Redis connection for caching and session storage
       - REDIS_URL=redis://redis:6379/0
+      # Kafka broker for event streaming
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      # Application environment configuration
       - ENVIRONMENT=development
       - LOG_LEVEL=INFO
     volumes:
+      # Hot-reload for development - mount source code
       - ./services/api:/app/services/api
+      # Shared data directory for file uploads and ML model artifacts
       - ./data:/app/data
     networks:
       - aquaculture-network
     restart: unless-stopped
 
-  # ML Service
+  # Machine Learning Inference Service
+  # Handles ML model loading, inference requests, and batch predictions
   ml-service:
     build:
-      context: .
-      dockerfile: infrastructure/docker/Dockerfile.ml
+      context: .  # Build context from project root
+      dockerfile: infrastructure/docker/Dockerfile.ml-service
     container_name: aquaculture-ml
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy  # Needs database for model metadata
       redis:
-        condition: service_healthy
+        condition: service_healthy  # Uses Redis for prediction caching
     ports:
       - "8001:8001"
     environment:
+      # Database connection for model metadata and prediction logging
       - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      # Redis for caching predictions and model artifacts
       - REDIS_URL=redis://redis:6379/0
+      # Path to the main ML model file
       - MODEL_PATH=/app/models/fish_classifier.pth
+      # Batch size for inference optimization
       - BATCH_SIZE=32
     volumes:
+      # Hot-reload for development
       - ./services/ml-service:/app/services/ml-service
+      # Model artifacts storage
       - ./data/models:/app/models
+      # Shared data directory for input/output files
       - ./data:/app/data
     networks:
       - aquaculture-network
@@ -125,24 +216,38 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
-  # Prometheus
+  # ========================================================================
+  # MONITORING AND OBSERVABILITY LAYER
+  # ========================================================================
+
+  # Prometheus - Time-series database for metrics collection and alerting
+  # Scrapes metrics from all services and triggers alerts based on rules
   prometheus:
     image: prom/prometheus:v2.48.0
     container_name: aquaculture-prometheus
     ports:
       - "9090:9090"
     volumes:
+      # Main Prometheus configuration file
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      # Alert rules directory
       - ./monitoring/prometheus/rules:/etc/prometheus/rules
+      # Persistent data storage for time-series data
       - prometheus_data:/prometheus
     command:
+      # Configuration file location
       - '--config.file=/etc/prometheus/prometheus.yml'
+      # Time-series database storage path
       - '--storage.tsdb.path=/prometheus'
+      # Console library paths for web interface
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
+      # Enable runtime configuration reloading via API
       - '--web.enable-lifecycle'
+      # Data retention policies for storage management
       - '--storage.tsdb.retention.time=30d'
       - '--storage.tsdb.retention.size=10GB'
+      # Enable administrative API endpoints
       - '--web.enable-admin-api'
     networks:
       - aquaculture-network
@@ -152,24 +257,37 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Grafana
+  # Grafana - Visualization and dashboarding platform
+  # Provides rich dashboards for metrics visualization and alerting interface
   grafana:
     image: grafana/grafana:10.2.2
     container_name: aquaculture-grafana
     depends_on:
-      - prometheus
+      - prometheus  # Needs Prometheus as primary data source
     ports:
-      - "3000:3000"
+      - "3001:3000"  # Port 3001 to avoid conflict with frontend development server
     environment:
+      # Default admin credentials (change in production)
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # TODO: Use secrets management
+      # Disable user registration for security
       - GF_USERS_ALLOW_SIGN_UP=false
+      # Install useful visualization plugins
       - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel,grafana-clock-panel
+      # Enable new unified alerting system
       - GF_FEATURE_TOGGLES_ENABLE=ngalert
     volumes:
+      # Pre-configured data sources and dashboards
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      # Dashboard JSON files for aquaculture-specific visualizations
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      # Persistent storage for Grafana database and settings
       - grafana_data:/var/lib/grafana
     networks:
       - aquaculture-network
@@ -180,19 +298,26 @@ services:
       timeout: 10s
       retries: 3
 
-  # Alertmanager
+  # Alertmanager - Alert routing and notification management
+  # Handles alerts from Prometheus and routes them to various notification channels
   alertmanager:
     image: prom/alertmanager:v0.26.0
     container_name: aquaculture-alertmanager
     ports:
       - "9093:9093"
     volumes:
+      # Alertmanager configuration file
       - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      # Persistent storage for alert state and silences
       - alertmanager_data:/alertmanager
     command:
+      # Configuration file location
       - '--config.file=/etc/alertmanager/alertmanager.yml'
+      # Data storage path for alert state
       - '--storage.path=/alertmanager'
+      # External URL for proper link generation in notifications
       - '--web.external-url=http://localhost:9093'
+      # Cluster advertisement address for high availability
       - '--cluster.advertise-address=0.0.0.0:9093'
     networks:
       - aquaculture-network
@@ -210,13 +335,16 @@ services:
     ports:
       - "9100:9100"
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
+      # Mount host directories for system metrics collection
+      - /proc:/host/proc:ro      # Process information
+      - /sys:/host/sys:ro        # System information
+      - /:/rootfs:ro             # Root filesystem
     command:
+      # Configure paths for containerized environment
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
+      # Exclude virtual filesystems from disk metrics
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - aquaculture-network
@@ -229,14 +357,15 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-      - /dev/disk/:/dev/disk:ro
-    privileged: true
+      # Mount host directories for container metrics collection
+      - /:/rootfs:ro                    # Root filesystem access
+      - /var/run:/var/run:ro           # Docker socket and runtime info
+      - /sys:/sys:ro                   # System information
+      - /var/lib/docker/:/var/lib/docker:ro  # Docker container data
+      - /dev/disk/:/dev/disk:ro        # Disk device information
+    privileged: true  # Required for low-level system access
     devices:
-      - /dev/kmsg
+      - /dev/kmsg  # Kernel message buffer access
     networks:
       - aquaculture-network
     restart: unless-stopped
@@ -248,9 +377,10 @@ services:
     ports:
       - "9121:9121"
     environment:
+      # Redis connection string for metrics collection
       - REDIS_ADDR=redis://redis:6379
     depends_on:
-      - redis
+      - redis  # Wait for Redis to be available
     networks:
       - aquaculture-network
     restart: unless-stopped
@@ -262,9 +392,10 @@ services:
     ports:
       - "9187:9187"
     environment:
+      # PostgreSQL connection string for metrics collection
       - DATA_SOURCE_NAME=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db?sslmode=disable
     depends_on:
-      - postgres
+      - postgres  # Wait for PostgreSQL to be available
     networks:
       - aquaculture-network
     restart: unless-stopped
@@ -274,65 +405,102 @@ services:
     image: jaegertracing/all-in-one:1.51
     container_name: aquaculture-jaeger
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "14268:14268"  # Jaeger HTTP receiver
-      - "14269:14269"  # Jaeger metrics
+      - "16686:16686"  # Jaeger UI web interface
+      - "14268:14268"  # Jaeger HTTP receiver for spans
+      - "14269:14269"  # Jaeger metrics endpoint
     environment:
+      # Enable OpenTelemetry Protocol support
       - COLLECTOR_OTLP_ENABLED=true
+      # Use Prometheus for metrics storage backend
       - METRICS_STORAGE_TYPE=prometheus
+      # Prometheus server URL for metrics storage
       - PROMETHEUS_SERVER_URL=http://prometheus:9090
     networks:
       - aquaculture-network
     restart: unless-stopped
 
   # Worker Service (Celery)
+  # Handles asynchronous tasks like ML training, data processing, email sending
   worker:
     build:
       context: .
-      dockerfile: infrastructure/docker/Dockerfile.api
+      dockerfile: infrastructure/docker/Dockerfile.api  # Reuses API Dockerfile
     container_name: aquaculture-worker
     command: celery -A services.worker.celery_app worker --loglevel=info
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_healthy  # Needs database for task results
       redis:
-        condition: service_healthy
+        condition: service_healthy  # Uses Redis as message broker
       kafka:
-        condition: service_started
+        condition: service_started  # Consumes Kafka events
     environment:
+      # Same environment as API service for shared database access
       - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      # Redis as Celery message broker and result backend
       - REDIS_URL=redis://redis:6379/0
+      # Kafka for event-driven task triggering
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     volumes:
+      # Hot-reload for development
       - ./services/worker:/app/services/worker
+      # Shared data directory for file processing tasks
       - ./data:/app/data
     networks:
       - aquaculture-network
     restart: unless-stopped
 
   # Frontend Service
+  # React SPA with TypeScript and Vite build system
   frontend:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile.frontend
     container_name: aquaculture-frontend
     depends_on:
-      - api
+      - api  # Needs API service for backend communication
     ports:
-      - "3000:80"
+      - "3000:80"  # Nginx serves on port 80, exposed as 3000
     environment:
+      # API endpoint for frontend to communicate with backend
       - VITE_API_URL=http://localhost:8000
     networks:
       - aquaculture-network
     restart: unless-stopped
 
+# ============================================================================
+# PERSISTENT VOLUMES
+# ============================================================================
+# Named volumes for data persistence across container restarts
+
 volumes:
+  # PostgreSQL database files
   postgres_data:
+    driver: local
+  
+  # Redis persistence files (AOF and RDB)
   redis_data:
+    driver: local
+  
+  # Prometheus time-series database
   prometheus_data:
+    driver: local
+  
+  # Grafana dashboards, plugins, and configuration
   grafana_data:
+    driver: local
+  
+  # Alertmanager state and silence data
   alertmanager_data:
+    driver: local
+
+# ============================================================================
+# NETWORK CONFIGURATION
+# ============================================================================
+# Custom bridge network for service-to-service communication
 
 networks:
   aquaculture-network:
     driver: bridge
+    # Custom network enables DNS-based service discovery
+    # Services can communicate using container names as hostnames

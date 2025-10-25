@@ -76,7 +76,7 @@ class PredictionRequest(BaseModel):
     model_version: Optional[str] = Field(
         None,
         description="Model version to use (defaults to active version)",
-        regex=r"^v\d+\.\d+\.\d+$",
+        pattern=r"^v\d+\.\d+\.\d+$",
     )
     return_probabilities: bool = Field(
         False, description="Return probabilities for all classes"
@@ -189,7 +189,7 @@ class BatchPredictionRequest(BaseModel):
         min_items=1,
         max_items=100,  # Limit batch size
     )
-    model_version: Optional[str] = Field(None, regex=r"^v\d+\.\d+\.\d+$")
+    model_version: Optional[str] = Field(None, pattern=r"^v\d+\.\d+\.\d+$")
     batch_size: int = Field(32, description="Processing batch size", ge=1, le=64)
 
 

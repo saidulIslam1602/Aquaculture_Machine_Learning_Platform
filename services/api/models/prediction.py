@@ -21,7 +21,7 @@ class Prediction(Base):
     predicted_species_id = Column(Integer, ForeignKey("fish_species.id"))
     confidence = Column(Numeric(5, 4))
     inference_time_ms = Column(Integer)
-    metadata = Column(JSONB)
+    prediction_metadata = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
@@ -72,7 +72,7 @@ class Model(Base):
     recall_score = Column(Numeric(5, 4))
     f1_score = Column(Numeric(5, 4))
     is_active = Column(Boolean, default=False)
-    metadata = Column(JSONB)
+    model_metadata = Column(JSONB)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     created_by = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 

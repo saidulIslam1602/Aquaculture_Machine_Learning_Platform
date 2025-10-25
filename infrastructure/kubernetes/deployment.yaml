@@ -1,8 +1,40 @@
-# Kubernetes Deployment Manifests
-# Production-grade deployment configuration for aquaculture ML platform
+# ============================================================================
+# Kubernetes Deployment Manifests for Aquaculture ML Platform
+# ============================================================================
+#
+# This file contains production-grade Kubernetes deployment configurations
+# for the Aquaculture Machine Learning Platform. It defines:
+#
+# COMPONENTS:
+# - Namespace isolation for production environment
+# - API service deployment with high availability (3 replicas)
+# - ML service deployment with auto-scaling capabilities
+# - Worker service deployment for background tasks
+# - Load balancer services for external access
+# - ConfigMaps and Secrets for configuration management
+#
+# FEATURES:
+# - Rolling updates with zero-downtime deployment
+# - Health checks (liveness and readiness probes)
+# - Resource limits and requests for optimal scheduling
+# - Security contexts with non-root users
+# - Prometheus monitoring integration
+# - Horizontal Pod Autoscaling (HPA)
+#
+# DEPLOYMENT:
+# kubectl apply -f infrastructure/kubernetes/deployment.yaml
+#
+# MONITORING:
+# kubectl get pods -n aquaculture-prod
+# kubectl logs -f deployment/api-service -n aquaculture-prod
+# ============================================================================
 
 ---
-# Namespace
+# ============================================================================
+# NAMESPACE DEFINITION
+# ============================================================================
+# Isolated namespace for production aquaculture platform deployment
+
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,6 +42,10 @@ metadata:
   labels:
     name: aquaculture-prod
     environment: production
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/instance: production
+    app.kubernetes.io/version: "v1.0.0"
+    app.kubernetes.io/component: infrastructure
 
 ---
 # API Service Deployment

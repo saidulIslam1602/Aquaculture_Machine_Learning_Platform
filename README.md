@@ -1,10 +1,42 @@
 # 🐟 Aquaculture ML Platform
 
-A production-grade machine learning platform for real-time fish classification and health monitoring in aquaculture environments.
+<!--
+============================================================================
+PROJECT OVERVIEW AND ARCHITECTURE DOCUMENTATION
+============================================================================
 
-## 🎯 Project Focus: Data Engineering & Infrastructure
+The Aquaculture ML Platform is an enterprise-grade, cloud-native machine
+learning platform designed for real-time fish species classification and
+aquaculture health monitoring at industrial scale.
 
-This project demonstrates **production-grade data engineering and platform infrastructure** for ML deployment at scale - the core skills required for a Senior ML/Data Engineer role.
+PROJECT VISION:
+To demonstrate production-ready ML engineering practices, infrastructure
+design, and DevOps excellence required for senior-level ML/Data Engineering
+roles in enterprise environments.
+
+KEY DIFFERENTIATORS:
+- Full-stack ML platform with production infrastructure
+- Cloud-native architecture with Kubernetes orchestration
+- Real-time streaming data processing capabilities
+- Comprehensive observability and monitoring stack
+- Enterprise security and compliance features
+- Scalable microservices architecture
+
+TECHNOLOGY SHOWCASE:
+- Modern Python ecosystem (FastAPI, SQLAlchemy, Celery)
+- React TypeScript frontend with Material-UI
+- Container orchestration with Docker and Kubernetes
+- Infrastructure as Code with Terraform
+- CI/CD automation with GitHub Actions
+- Monitoring with Prometheus and Grafana
+============================================================================
+-->
+
+A **production-grade, cloud-native machine learning platform** for real-time fish classification and health monitoring in aquaculture environments, showcasing enterprise-level ML engineering and infrastructure design.
+
+## 🎯 Project Focus: Enterprise ML Engineering & Cloud Infrastructure
+
+This platform demonstrates **world-class data engineering and ML infrastructure practices** required for **Senior ML/Data Engineer** roles at scale, featuring production-ready architecture patterns used by leading technology companies.
 
 ### What's Implemented (Production-Ready) ✅
 

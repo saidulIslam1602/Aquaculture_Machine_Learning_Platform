@@ -1,29 +1,77 @@
-# Testing
-pytest==7.4.3
-pytest-cov==4.1.0
-pytest-asyncio==0.21.1
-pytest-mock==3.12.0
-httpx==0.25.2
+# ============================================================================
+# Development Dependencies for Aquaculture ML Platform
+# ============================================================================
+#
+# This file contains development-only dependencies used for testing, code
+# quality, documentation, and development workflow. These packages are NOT
+# included in production deployments to keep the runtime environment lean.
+#
+# INSTALLATION:
+# pip install -r requirements.txt -r requirements-dev.txt
+#
+# CATEGORIES:
+# - Testing: Unit tests, integration tests, test coverage
+# - Code Quality: Linting, formatting, type checking
+# - Load Testing: Performance and stress testing tools
+# - Documentation: API docs and development guides
+# - Development Tools: Interactive debugging and Git hooks
+#
+# USAGE IN CI/CD:
+# - Install dev dependencies for test and lint stages
+# - Skip dev dependencies in production Docker images
+# - Use pre-commit hooks for automated code quality checks
+# ============================================================================
 
-# Code Quality
-black==23.11.0
-flake8==6.1.0
-mypy==1.7.1
-isort==5.12.0
-pylint==3.0.3
+# ============================================================================
+# TESTING FRAMEWORK & UTILITIES
+# ============================================================================
+# Comprehensive testing suite with async support and coverage reporting
 
-# Type Stubs
-types-redis==4.6.0.11
-types-PyYAML==6.0.12.12
+pytest==7.4.3                       # Modern Python testing framework
+pytest-cov==4.1.0                   # Test coverage reporting plugin
+pytest-asyncio==0.21.1              # Async/await support for pytest
+pytest-mock==3.12.0                 # Mock object library integration
+httpx==0.25.2                       # HTTP client for API testing (also in prod)
 
-# Load Testing
-locust==2.18.0
+# ============================================================================
+# CODE QUALITY & FORMATTING TOOLS
+# ============================================================================
+# Automated code formatting, linting, and static analysis
 
-# Documentation
-mkdocs==1.5.3
-mkdocs-material==9.4.14
+black==23.11.0                      # Uncompromising Python code formatter
+flake8==6.1.0                       # Python linting for style and errors
+mypy==1.7.1                         # Static type checker for Python
+isort==5.12.0                       # Import statement organizer
+pylint==3.0.3                       # Comprehensive Python code analyzer
 
-# Development Tools
-ipython==8.18.1
-ipdb==0.13.13
-pre-commit==3.5.0
+# ============================================================================
+# TYPE CHECKING SUPPORT
+# ============================================================================
+# Type stubs for third-party libraries to improve mypy analysis
+
+types-redis==4.6.0.11               # Type stubs for Redis client
+types-PyYAML==6.0.12.12             # Type stubs for YAML parsing
+
+# ============================================================================
+# PERFORMANCE & LOAD TESTING
+# ============================================================================
+# Tools for stress testing and performance analysis
+
+locust==2.18.0                      # Modern load testing framework
+
+# ============================================================================
+# DOCUMENTATION GENERATION
+# ============================================================================
+# Tools for generating and serving project documentation
+
+mkdocs==1.5.3                       # Fast, simple static site generator
+mkdocs-material==9.4.14             # Material Design theme for MkDocs
+
+# ============================================================================
+# DEVELOPMENT & DEBUGGING TOOLS
+# ============================================================================
+# Interactive development environment and debugging utilities
+
+ipython==8.18.1                     # Enhanced interactive Python shell
+ipdb==0.13.13                       # IPython-enabled Python debugger
+pre-commit==3.5.0                   # Git pre-commit hooks for code quality

@@ -41,40 +41,47 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing token on mount
+  // Initialize authentication state on mount
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      // TODO: Validate token and fetch user info
-      setIsLoading(false);
-    } else {
-      setIsLoading(false);
-    }
+    const initAuth = async () => {
+      try {
+        // Check if user has valid session
+        const currentUser = await apiClient.getCurrentUser();
+        setUser(currentUser);
+      } catch (error) {
+        // No valid session, user needs to login
+        console.log('No valid authentication session');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
   /**
    * Login User
    * 
-   * Authenticates user and stores token.
+   * Authenticates user with backend API and establishes session.
+   * Uses httpOnly cookies for secure token storage.
    * 
-   * @param credentials - Login credentials
-   * @throws Error if login fails
+   * @param credentials - User login credentials
+   * @throws Error if authentication fails
    */
   const login = async (credentials: LoginCredentials): Promise<void> => {
     try {
       setIsLoading(true);
+      
+      // Authenticate with backend API
       await apiClient.login(credentials);
       
-      // TODO: Fetch user profile
-      const mockUser: User = {
-        id: '1',
-        email: 'user@example.com',
-        username: credentials.username,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
+      // Fetch complete user profile
+      const userProfile = await apiClient.getCurrentUser();
       
-      setUser(mockUser);
+      setUser(userProfile);
+    } catch (error) {
+      // Re-throw error for component-level handling
+      throw error;
     } finally {
       setIsLoading(false);
     }

@@ -1,0 +1,123 @@
+# ============================================================================
+# Git Commit Message Template
+# ============================================================================
+#
+# This template follows Conventional Commits specification for consistent,
+# semantic commit messages that enable automated versioning and changelog
+# generation.
+#
+# FORMAT: <type>[optional scope]: <description>
+#
+# [optional body]
+#
+# [optional footer(s)]
+#
+# TYPES:
+# - feat:     New features
+# - fix:      Bug fixes
+# - docs:     Documentation changes
+# - style:    Code style changes (formatting, etc.)
+# - refactor: Code refactoring without feature changes
+# - perf:     Performance improvements
+# - test:     Adding or updating tests
+# - chore:    Maintenance tasks, dependency updates
+# - ci:       CI/CD pipeline changes
+# - build:    Build system changes
+# - revert:   Reverting previous commits
+#
+# SCOPES (optional):
+# - api:      Backend API changes
+# - ml:       Machine learning components
+# - frontend: Frontend application changes
+# - docs:     Documentation updates
+# - infra:    Infrastructure changes
+# - k8s:      Kubernetes configurations
+# - docker:   Docker configurations
+# - db:       Database changes
+# - auth:     Authentication/authorization
+# - monitor:  Monitoring and observability
+# - security: Security-related changes
+# - perf:     Performance optimizations
+#
+# EXAMPLES:
+# - feat(api): add fish species classification endpoint
+# - fix(ml): resolve memory leak in model inference
+# - docs: update deployment guide with Kubernetes instructions
+# - perf(db): optimize query performance for prediction history
+# - feat(frontend): implement user dashboard with analytics
+# - ci: add automated security scanning to pipeline
+# - chore(deps): update FastAPI to version 0.104.1
+# ============================================================================
+
+# Type and scope (required)
+<type>[(optional scope)]: <description>
+
+# Body (optional) - Explain what and why, not how
+# Use imperative mood: "add feature" not "added feature"
+# Wrap at 72 characters
+
+
+# Footer (optional) - Reference issues, breaking changes
+# Breaking changes: BREAKING CHANGE: <description>
+# Issue references: Closes #123, Fixes #456
+
+
+# ============================================================================
+# COMMIT MESSAGE GUIDELINES
+# ============================================================================
+#
+# 1. HEADER (First line):
+#    - Keep under 50 characters
+#    - Use imperative mood ("add" not "added")
+#    - Don't end with a period
+#    - Start with type and optional scope
+#
+# 2. BODY (Optional):
+#    - Wrap at 72 characters
+#    - Explain what and why, not how
+#    - Use present tense, imperative mood
+#    - Can have multiple paragraphs
+#
+# 3. FOOTER (Optional):
+#    - Reference breaking changes
+#    - Reference closed issues
+#    - Include co-authors if applicable
+#
+# 4. EXAMPLES OF GOOD COMMIT MESSAGES:
+#
+#    feat(api): add JWT refresh token endpoint
+#    
+#    Implement refresh token mechanism to improve security
+#    and user experience. Tokens expire after 15 minutes
+#    but can be refreshed for up to 7 days.
+#    
+#    Closes #123
+#
+#    fix(ml): resolve GPU memory leak in batch processing
+#    
+#    Clear GPU cache after each batch to prevent memory
+#    accumulation during long-running inference tasks.
+#    Memory usage reduced from 8GB to 2GB sustained.
+#    
+#    perf(db): add database indexes for prediction queries
+#    
+#    Add composite indexes on (user_id, created_at) and
+#    (species_id, confidence) to improve query performance.
+#    Query time reduced from 250ms to 15ms.
+#    
+#    BREAKING CHANGE: API response format changed for
+#    prediction endpoints to include additional metadata
+#
+# 5. COMMIT TYPES USAGE:
+#    - feat:     New features that add value for users
+#    - fix:      Bug fixes that resolve issues
+#    - docs:     Documentation updates only
+#    - style:    Code formatting, semicolons, etc.
+#    - refactor: Code changes without feature/bug changes
+#    - perf:     Performance improvements
+#    - test:     Adding or updating tests
+#    - chore:    Dependency updates, config changes
+#    - ci:       CI/CD pipeline modifications
+#    - build:    Build system or external deps
+#
+# ============================================================================

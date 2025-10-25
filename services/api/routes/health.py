@@ -1,6 +1,40 @@
-"""Health check routes"""
+"""
+============================================================================
+Health Check API Routes for Aquaculture ML Platform
+============================================================================
 
-from fastapi import APIRouter, Depends
+This module provides comprehensive health monitoring endpoints for the
+aquaculture platform API service. These endpoints are essential for:
+
+- Container orchestration health checks (Docker, Kubernetes)
+- Load balancer health verification
+- Monitoring system integration (Prometheus, Grafana)
+- DevOps pipeline status verification
+- Production troubleshooting and diagnostics
+
+ENDPOINTS:
+- GET /health: Basic health status for simple checks
+- GET /health/detailed: Comprehensive system status with dependencies
+
+HEALTH CHECK LEVELS:
+1. Basic: Service is running and responding
+2. Detailed: Service + database + cache + external dependencies
+
+USAGE:
+- Docker: HEALTHCHECK instruction uses /health endpoint
+- Kubernetes: liveness and readiness probes
+- Load Balancers: Backend health verification
+- Monitoring: Alerting based on health status
+
+RESPONSE FORMATS:
+- 200 OK: Service is healthy
+- 503 Service Unavailable: Service or dependencies are unhealthy
+- Consistent JSON format for programmatic consumption
+============================================================================
+"""
+
+from typing import Dict, Any
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -8,6 +42,7 @@ from ..core.config import settings
 from ..core.database import get_db
 from ..core.redis_client import get_redis
 
+# Create router with health-specific tags for OpenAPI documentation
 router = APIRouter(tags=["health"])
 
 

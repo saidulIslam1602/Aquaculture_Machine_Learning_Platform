@@ -102,7 +102,12 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
             # Record metrics for performance tracking
             success = response.status_code < 400
-            performance_metrics.record_request(process_time_ms, success=success)
+            performance_metrics.record_api_request(
+                method=request.method,
+                endpoint=str(request.url.path),
+                status_code=response.status_code if hasattr(request.state, 'response') else 200,
+                duration=process_time_ms / 1000  # Convert to seconds
+            )
 
             # Add custom headers
             response.headers["X-Request-ID"] = request_id

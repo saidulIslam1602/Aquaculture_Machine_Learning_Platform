@@ -63,7 +63,7 @@ class Settings(BaseSettings):
 
     # Redis Configuration
     # In-memory cache and session store settings
-    REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_URL: str = "redis://redis:6379/0"  # Internal docker network uses 6379
     REDIS_MAX_CONNECTIONS: int = 50  # Connection pool size
 
     # Kafka Configuration
@@ -96,6 +96,19 @@ class Settings(BaseSettings):
     # Observability and metrics collection settings
     PROMETHEUS_ENABLED: bool = True
     LOG_LEVEL: str = "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+    # ML Configuration
+    # Machine Learning model and inference settings
+    MODEL_PATH: str = "/app/models/fish_classifier_v1.pth"
+    BATCH_SIZE: int = 32  # Images processed simultaneously
+    CONFIDENCE_THRESHOLD: float = 0.5  # Minimum confidence for valid predictions
+    INFERENCE_DEVICE: str = "cpu"  # Device for ML inference (cpu/cuda)
+    
+    # File Upload Configuration
+    # Image upload settings for fish classification
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB maximum file size
+    UPLOAD_DIR: str = "/app/uploads"  # Directory for uploaded files
+    ALLOWED_EXTENSIONS: List[str] = ["jpg", "jpeg", "png", "webp"]  # Allowed image formats
 
     # Environment Configuration
     # Deployment environment settings

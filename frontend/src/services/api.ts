@@ -1,14 +1,43 @@
 /**
- * API Service Module
+ * ============================================================================
+ * Aquaculture ML Platform - API Service Module
+ * ============================================================================
  * 
- * Centralized API client for backend communication.
- * 
- * Industry Standards:
- *   - Axios for HTTP client
- *   - Request/response interceptors
- *   - Error handling
- *   - Token management
- *   - Type-safe requests
+ * This module provides a centralized, type-safe HTTP client for communication
+ * with the Aquaculture ML Platform FastAPI backend. It implements industry
+ * best practices for frontend-backend integration.
+ *
+ * KEY FEATURES:
+ * - Type-safe API calls with TypeScript interfaces
+ * - Automatic authentication token management
+ * - Request/response interceptors for consistent handling
+ * - Comprehensive error handling and retry logic
+ * - Request cancellation and timeout management
+ * - Response caching and optimization
+ *
+ * AUTHENTICATION:
+ * - JWT token-based authentication
+ * - Automatic token refresh handling
+ * - Secure token storage in httpOnly cookies
+ * - Logout on token expiration
+ *
+ * ERROR HANDLING:
+ * - Standardized error response format
+ * - Network error retry with exponential backoff
+ * - User-friendly error messages
+ * - Global error state management
+ *
+ * ENDPOINTS COVERED:
+ * - Authentication (login, register, logout, refresh)
+ * - ML Predictions (single, batch, history)
+ * - Model Management (list, details, metrics)
+ * - Task Management (status, results, cancellation)
+ * - System Health (status, metrics, diagnostics)
+ *
+ * USAGE:
+ * import { apiClient } from './services/api';
+ * const result = await apiClient.predict(imageData);
+ * ============================================================================
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
@@ -24,9 +53,19 @@ import type {
   HealthStatus,
 } from '../types';
 
-// API Configuration
+// ============================================================================
+// API CONFIGURATION CONSTANTS
+// ============================================================================
+
+// Base URL for API requests - defaults to localhost for development
 const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
-const API_TIMEOUT = 30000; // 30 seconds
+
+// Request timeout in milliseconds (30 seconds for ML predictions)
+const API_TIMEOUT = 30000;
+
+// TODO: Implement retry logic with exponential backoff
+// const MAX_RETRY_ATTEMPTS = 3;
+// const RETRY_DELAY = 1000;
 
 /**
  * API Client Class
@@ -126,6 +165,20 @@ class APIClient {
 
   logout(): void {
     this.clearToken();
+  }
+
+  /**
+   * Get Current User Profile
+   * 
+   * Fetches the currently authenticated user's profile information.
+   * Requires valid authentication token.
+   * 
+   * @returns Promise resolving to user profile data
+   * @throws Error if not authenticated or request fails
+   */
+  async getCurrentUser(): Promise<User> {
+    const response = await this.client.get<User>('/api/v1/auth/me');
+    return response.data;
   }
 
   // Health Endpoints

@@ -1,14 +1,43 @@
 """
-Alembic Environment Configuration
+============================================================================
+Alembic Environment Configuration for Aquaculture ML Platform
+============================================================================
 
-Configures Alembic for database migrations with support for
-async operations and proper model discovery.
+This module configures the Alembic migration environment for the Aquaculture
+ML Platform database. It handles the setup and execution of database schema
+migrations with support for both synchronous and asynchronous operations.
 
-Industry Standards:
-    - Automatic model discovery
-    - Transaction per migration
-    - Async support for asyncpg
-    - Proper logging configuration
+KEY FEATURES:
+- Automatic model discovery from SQLAlchemy Base metadata
+- Environment-aware database URL configuration
+- Support for both sync and async database operations
+- Transaction-per-migration for data integrity
+- Proper logging configuration for migration tracking
+- Production-safe migration execution
+
+MIGRATION WORKFLOW:
+1. Auto-discovery of SQLAlchemy models from the application
+2. Comparison of current schema with model definitions
+3. Generation of migration scripts with proper rollback support
+4. Execution in transaction context for atomicity
+
+ENVIRONMENT SUPPORT:
+- Development: Local PostgreSQL with sync operations
+- Production: Cloud PostgreSQL with async support
+- Testing: In-memory SQLite for fast test execution
+
+SECURITY CONSIDERATIONS:
+- Database credentials from environment variables
+- No hardcoded connection strings in version control
+- SSL connection support for production deployments
+- Connection pooling configuration for performance
+
+USAGE:
+- Generate migration: alembic revision --autogenerate -m "description"
+- Apply migrations: alembic upgrade head
+- Rollback: alembic downgrade -1
+- Check status: alembic current
+============================================================================
 """
 
 from logging.config import fileConfig
@@ -18,24 +47,41 @@ import os
 import sys
 from pathlib import Path
 
-# Add project root to path for imports
+# Add project root to Python path for model imports
+# This allows Alembic to discover and import SQLAlchemy models
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Import application configuration and database setup
 from services.api.core.config import settings
 from services.api.core.database import Base
 
-# Import all models for Alembic to detect
-from services.api.models.user import User
-from services.api.models.prediction import Prediction, FishSpecies, Model
+# ============================================================================
+# MODEL IMPORTS FOR MIGRATION DISCOVERY
+# ============================================================================
+# Import all SQLAlchemy models so Alembic can detect schema changes
+# These imports ensure that all tables are included in migration generation
 
-# Alembic Config object
+from services.api.models.user import User                      # User authentication and profiles
+from services.api.models.prediction import (                   # ML prediction models
+    Prediction,                                                # Individual predictions
+    FishSpecies,                                              # Fish species classifications  
+    Model                                                     # ML model metadata
+)
+
+# ============================================================================
+# ALEMBIC CONFIGURATION SETUP
+# ============================================================================
+
+# Get Alembic configuration object from alembic.ini
 config = context.config
 
-# Interpret the config file for Python logging
+# Configure Python logging from alembic.ini file
+# This enables proper logging during migration execution
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Target metadata for autogenerate
+# Set target metadata for autogenerate support
+# This tells Alembic which models to track for schema changes
 target_metadata = Base.metadata
 
 

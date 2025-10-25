@@ -1,53 +1,127 @@
-# Multi-stage build for API service
+# ============================================================================
+# Multi-Stage Dockerfile for Aquaculture ML Platform API Service
+# ============================================================================
+#
+# This Dockerfile creates an optimized, production-ready container for the
+# FastAPI application using multi-stage build pattern for:
+#
+# OPTIMIZATION BENEFITS:
+# - Smaller final image size (excludes build tools)
+# - Faster deployment and startup times
+# - Reduced attack surface (no build dependencies in production)
+# - Improved security (non-root user execution)
+#
+# SECURITY FEATURES:
+# - Non-root user execution
+# - Minimal base image (slim variant)
+# - Clean package cache removal
+# - Explicit dependency copying
+#
+# BUILD STAGES:
+# 1. Builder: Install dependencies with build tools
+# 2. Runtime: Copy dependencies and run application
+# ============================================================================
+
+# ============================================================================
+# STAGE 1: BUILD STAGE
+# ============================================================================
+# Install Python dependencies with build tools and compilers
+
 FROM python:3.10-slim as builder
 
-# Set working directory
+# Set working directory for build operations
 WORKDIR /app
 
-# Install system dependencies
+# Install system build dependencies required for Python packages
+# - gcc/g++: C/C++ compilers for native extensions
+# - libpq-dev: PostgreSQL development headers for psycopg2
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache to reduce image size
 
-# Copy requirements
+# Copy Python requirements file
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies to user directory
+# --no-cache-dir: Don't store pip cache (reduces image size)
+# --user: Install to user directory for easy copying to final stage
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Final stage
+# ============================================================================
+# STAGE 2: RUNTIME STAGE
+# ============================================================================
+# Create minimal runtime image with only necessary components
+
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime system dependencies (no build tools needed)
+# - libpq5: PostgreSQL client library (runtime only)
+# - curl: For health checks and debugging
 RUN apt-get update && apt-get install -y \
     libpq5 \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache
 
-# Copy Python dependencies from builder
+# Copy Python dependencies from builder stage
 COPY --from=builder /root/.local /root/.local
 
-# Make sure scripts in .local are usable
+# Add Python user packages to PATH
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy application source code
 COPY services/api /app/services/api
 COPY services/__init__.py /app/services/__init__.py
 
-# Create non-root user
+# ============================================================================
+# SECURITY: NON-ROOT USER SETUP
+# ============================================================================
+# Create and configure non-root user for enhanced security
+
+# Create application user with specific UID for consistency
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+
+# Copy Python dependencies to appuser's home directory
+RUN cp -r /root/.local /home/appuser/.local && chown -R appuser:appuser /home/appuser/.local
+
+# Switch to non-root user
 USER appuser
 
-# Expose port
+# Update PATH for appuser to access installed packages
+ENV PATH=/home/appuser/.local/bin:$PATH
+
+# ============================================================================
+# CONTAINER CONFIGURATION
+# ============================================================================
+
+# Expose the FastAPI application port
 EXPOSE 8000
 
-# Health check
+# ============================================================================
+# HEALTH CHECK CONFIGURATION
+# ============================================================================
+# Configure container health monitoring for orchestration systems
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run application
-CMD ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check parameters explained:
+# --interval=30s: Check every 30 seconds
+# --timeout=10s: Timeout after 10 seconds
+# --start-period=40s: Grace period for application startup
+# --retries=3: Mark unhealthy after 3 consecutive failures
+
+# ============================================================================
+# APPLICATION STARTUP
+# ============================================================================
+# Start the FastAPI application with Uvicorn ASGI server
+
+CMD ["python", "-m", "uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Command parameters:
+# --host=0.0.0.0: Bind to all network interfaces (required for containers)
+# --port=8000: Listen on port 8000 (matches EXPOSE directive)
+# services.api.main:app: Python module path to FastAPI application instance

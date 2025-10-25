@@ -1,13 +1,43 @@
 /**
- * Dashboard Page Component
+ * ============================================================================
+ * Aquaculture ML Platform - Dashboard Page Component
+ * ============================================================================
  * 
- * Main dashboard with metrics, charts, and system overview.
- * 
- * Industry Standards:
- *   - Component composition
- *   - React hooks for state management
- *   - Material-UI for consistent design
- *   - Real-time data updates
+ * The main dashboard provides a comprehensive overview of the aquaculture
+ * machine learning platform's performance, system health, and key metrics.
+ *
+ * FEATURES:
+ * - Real-time system metrics and KPI visualization
+ * - ML model performance tracking and analytics
+ * - Prediction accuracy trends and success rates
+ * - System health monitoring and alerts
+ * - Interactive data visualization with Recharts
+ * - Responsive grid layout for optimal viewing
+ *
+ * COMPONENTS:
+ * - MetricCard: Individual KPI display components
+ * - Performance Charts: Time-series data visualization
+ * - System Status: Health indicators and alerts
+ * - Recent Activity: Latest predictions and operations
+ *
+ * DATA SOURCES:
+ * - API metrics from FastAPI backend
+ * - ML model performance data
+ * - System health from monitoring stack
+ * - User activity and prediction logs
+ *
+ * REAL-TIME UPDATES:
+ * - Auto-refresh every 30 seconds
+ * - WebSocket integration for live metrics
+ * - Progressive data loading for smooth UX
+ * - Optimistic updates for immediate feedback
+ *
+ * RESPONSIVE DESIGN:
+ * - Mobile-first approach with Material-UI Grid
+ * - Adaptive chart sizing based on viewport
+ * - Touch-friendly interactions for tablets
+ * - Accessibility compliance (WCAG 2.1)
+ * ============================================================================
  */
 
 import React, { useEffect, useState } from 'react';
