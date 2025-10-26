@@ -27,12 +27,14 @@ TECHNOLOGY SHOWCASE:
 - React TypeScript frontend with Material-UI
 - Container orchestration with Docker and Kubernetes
 - Infrastructure as Code with Terraform
+- **Sophisticated Jenkins CI/CD with Kubernetes integration**
 - CI/CD automation with GitHub Actions
 - Monitoring with Prometheus and Grafana
+- Security scanning with Trivy vulnerability detection
 ============================================================================
 -->
 
-A **production-grade, cloud-native machine learning platform** for real-time fish classification and health monitoring in aquaculture environments, showcasing enterprise-level ML engineering and infrastructure design.
+A **production-grade, cloud-native machine learning platform** for real-time fish classification and health monitoring in aquaculture environments, featuring sophisticated Jenkins CI/CD with Kubernetes integration, comprehensive security scanning, and enterprise-level ML engineering practices.
 
 ## 🎯 Project Focus: Enterprise ML Engineering & Cloud Infrastructure
 
@@ -68,12 +70,14 @@ This platform demonstrates **world-class data engineering and ML infrastructure 
 - Health checks and alerting rules
 
 **DevOps & Automation:**
+- **Jenkins CI/CD with Kubernetes integration (v1.1.0)** - Sophisticated pipeline with dynamic agents
 - GitHub Actions CI/CD with multi-stage pipeline
-- **Jenkins CI/CD with Kubernetes integration (v1.1.0)**
 - Automated testing (unit, integration, load)
-- Security scanning with Trivy
+- Security scanning with Trivy vulnerability detection
+- Container security scanning and compliance
 - Blue-green deployment support
 - Database migrations with Alembic
+- Multi-environment deployment (staging/production)
 
 **Frontend:**
 - React 18 + TypeScript 5 dashboard
@@ -101,7 +105,7 @@ The following components are structured and ready for ML model deployment:
 - **Data Pipeline**: Apache Kafka for streaming, PostgreSQL for storage
 - **ML Operations**: Model versioning, A/B testing, performance monitoring
 - **Observability**: Prometheus metrics, Grafana dashboards, distributed tracing
-- **CI/CD**: Automated testing, building, and deployment
+- **CI/CD**: Jenkins Kubernetes pipeline with security scanning, multi-environment deployment
 
 ## 🏗️ Architecture
 
@@ -278,6 +282,42 @@ locust -f tests/load/locustfile.py
 - Low throughput (<100 req/s)
 - Model performance degradation
 
+## 🚀 Jenkins CI/CD Pipeline
+
+### Sophisticated Kubernetes Integration
+
+The platform features a **production-grade Jenkins CI/CD pipeline** with advanced Kubernetes integration:
+
+#### Pipeline Features
+- **Dynamic Kubernetes Agents**: Jenkins agents run as pods in Kubernetes cluster
+- **Multi-Container Build Environment**: Docker-in-Docker, Python, kubectl, Trivy security scanner
+- **Comprehensive Security Scanning**: Container vulnerability detection with Trivy
+- **Multi-Environment Deployment**: Staging and production with approval gates
+- **Code Quality Pipeline**: Black, Flake8, Pylint, MyPy analysis
+- **Docker Image Management**: Automated building, scanning, and registry pushing
+- **GitHub Integration**: Automatic builds on code commits
+
+#### Pipeline Stages
+1. **Code Quality**: Linting, formatting, type checking
+2. **Security Scanning**: Vulnerability detection and compliance
+3. **Docker Build**: Multi-stage container builds
+4. **Container Security**: Trivy vulnerability scanning
+5. **Registry Push**: Automated image publishing
+6. **Staging Deployment**: Automated staging environment deployment
+7. **Production Deployment**: Manual approval-gated production deployment
+
+#### Jenkins Configuration
+- **Pipeline Job**: `aquaculture-pipeline`
+- **Kubernetes Cloud**: Dynamic agent provisioning
+- **Credentials Management**: Docker registry, Kubernetes tokens, kubeconfig
+- **RBAC Integration**: Kubernetes service account with proper permissions
+- **Monitoring**: Complete build tracking and reporting
+
+### Jenkins Setup Documentation
+- [Jenkins Setup Guide](jenkins/JENKINS_SETUP_COMPLETE.md)
+- [RBAC Configuration](jenkins/jenkins-rbac.yaml)
+- [Pipeline Definition](jenkins/Jenkinsfile)
+
 ## 🚢 Deployment
 
 ### Docker Compose (Development)
@@ -447,4 +487,4 @@ Built for sustainable aquaculture and precision fish farming.
 
 ---
 
-**Status**: 🚧 In Development | **Version**: 0.1.0 | **Last Updated**: October 2025
+**Status**: ✅ Production Ready | **Version**: 1.1.0 "Poseidon" | **Last Updated**: October 2024
