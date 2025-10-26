@@ -1,62 +1,28 @@
-# 🐟 Aquaculture ML Platform
+# Aquaculture ML Platform
 
-<!--
-============================================================================
-PROJECT OVERVIEW AND ARCHITECTURE DOCUMENTATION
-============================================================================
+A production-grade, cloud-native machine learning platform for real-time fish classification and health monitoring in aquaculture environments, featuring sophisticated Jenkins CI/CD with Kubernetes integration, comprehensive security scanning, and enterprise-level ML engineering practices.
 
-The Aquaculture ML Platform is an enterprise-grade, cloud-native machine
-learning platform designed for real-time fish species classification and
-aquaculture health monitoring at industrial scale.
-
-PROJECT VISION:
-To demonstrate production-ready ML engineering practices, infrastructure
-design, and DevOps excellence required for senior-level ML/Data Engineering
-roles in enterprise environments.
-
-KEY DIFFERENTIATORS:
-- Full-stack ML platform with production infrastructure
-- Cloud-native architecture with Kubernetes orchestration
-- Real-time streaming data processing capabilities
-- Comprehensive observability and monitoring stack
-- Enterprise security and compliance features
-- Scalable microservices architecture
-
-TECHNOLOGY SHOWCASE:
-- Modern Python ecosystem (FastAPI, SQLAlchemy, Celery)
-- React TypeScript frontend with Material-UI
-- Container orchestration with Docker and Kubernetes
-- **Enterprise Terraform Infrastructure**: Multi-environment AWS infrastructure with EKS, RDS, ElastiCache, MSK, S3, ECR, enterprise databases, GPU nodes, and advanced security
-- **Sophisticated Jenkins CI/CD with Kubernetes integration**
-- CI/CD automation with GitHub Actions
-- Monitoring with Prometheus and Grafana
-- Security scanning with Trivy vulnerability detection
-============================================================================
--->
-
-A **production-grade, cloud-native machine learning platform** for real-time fish classification and health monitoring in aquaculture environments, featuring sophisticated Jenkins CI/CD with Kubernetes integration, comprehensive security scanning, and enterprise-level ML engineering practices.
-
-## 🏆 Competitive Advantages & Market Position
+## Competitive Advantages & Market Position
 
 ### Industry Leadership
 
-The Aquaculture ML Platform positions organizations as **technology leaders** in the rapidly evolving aquaculture industry:
+The Aquaculture ML Platform positions organizations as technology leaders in the rapidly evolving aquaculture industry:
 
-#### 🚀 Technology Differentiation
+#### Technology Differentiation
 - **First-Mover Advantage**: Early adoption of ML/AI in aquaculture operations
 - **Enterprise-Grade Infrastructure**: Production-ready, scalable platform
 - **Advanced Analytics**: Predictive modeling and real-time decision support
 - **Integration Capabilities**: Seamless integration with existing farm management systems
 - **Future-Proof Architecture**: Cloud-native design supports continuous innovation
 
-#### 📊 Market Positioning Benefits
+#### Market Positioning Benefits
 - **Premium Brand Positioning**: Technology leadership enables premium pricing
 - **Investor Attraction**: Advanced technology attracts investment and partnerships
 - **Talent Acquisition**: Cutting-edge platform attracts top technical talent
 - **Regulatory Advantage**: Proactive compliance reduces regulatory risks
 - **Sustainability Leadership**: Environmental optimization supports ESG goals
 
-#### 🌍 Global Market Opportunities
+#### Global Market Opportunities
 - **Export Market Access**: Traceability enables premium export markets
 - **Certification Support**: Automated compliance supports organic/certified production
 - **Supply Chain Integration**: Platform enables end-to-end supply chain visibility
@@ -118,34 +84,34 @@ The Aquaculture ML Platform positions organizations as **technology leaders** in
 - **Traditional Scaling Time**: 1-3 months (Platform: Minutes)
 - **Traditional Monitoring Coverage**: 60-80% (Platform: 99%+)
 
-## 💼 Business Impact & ROI
+## Business Impact & ROI
 
 ### Measurable Business Outcomes
 
-The Aquaculture ML Platform delivers **quantifiable business value** through automation, efficiency gains, and data-driven decision making:
+The Aquaculture ML Platform delivers quantifiable business value through automation, efficiency gains, and data-driven decision making:
 
-#### 🐟 Aquaculture Operations Impact
+#### Aquaculture Operations Impact
 - **Fish Health Monitoring**: 24/7 automated health assessment reduces mortality rates by 15-25%
 - **Feed Optimization**: ML-driven feeding schedules improve feed conversion ratio by 12-18%
 - **Disease Detection**: Early disease identification prevents 60-80% of potential outbreaks
 - **Growth Tracking**: Automated growth monitoring increases harvest efficiency by 20-30%
 - **Water Quality Management**: Real-time monitoring prevents 40-60% of water quality incidents
 
-#### 💰 Cost Savings & Efficiency
+#### Cost Savings & Efficiency
 - **Labor Cost Reduction**: Automated monitoring reduces manual inspection time by 70-85%
 - **Feed Cost Optimization**: Smart feeding reduces feed waste by 15-25%
 - **Energy Efficiency**: Optimized systems reduce energy consumption by 10-20%
 - **Maintenance Costs**: Predictive maintenance reduces equipment downtime by 30-50%
 - **Insurance Premiums**: Risk reduction leads to 5-15% lower insurance costs
 
-#### 📈 Revenue Enhancement
+#### Revenue Enhancement
 - **Yield Improvement**: Optimized conditions increase fish yield by 8-15%
 - **Quality Premium**: Consistent quality commands 10-20% higher market prices
 - **Market Timing**: Data-driven harvest timing maximizes market value
 - **Compliance**: Automated reporting reduces compliance costs by 50-70%
 - **Traceability**: Full traceability enables premium market access
 
-#### 🏭 Production Scale Benefits
+#### Production Scale Benefits
 - **Small Farms (1-10 tons/year)**: $50K-150K annual savings
 - **Medium Farms (10-100 tons/year)**: $200K-800K annual savings  
 - **Large Farms (100+ tons/year)**: $1M-5M annual savings
@@ -240,11 +206,11 @@ The Aquaculture ML Platform delivers **quantifiable business value** through aut
 - **Compliance**: Zero regulatory violations
 - **Market Access**: Premium pricing enabled
 
-## 🎯 Project Focus: Enterprise ML Engineering & Cloud Infrastructure
+## Project Focus: Enterprise ML Engineering & Cloud Infrastructure
 
-This platform demonstrates **world-class data engineering and ML infrastructure practices** required for **Senior ML/Data Engineer** roles at scale, featuring production-ready architecture patterns used by leading technology companies.
+This platform demonstrates world-class data engineering and ML infrastructure practices required for Senior ML/Data Engineer roles at scale, featuring production-ready architecture patterns used by leading technology companies.
 
-### What's Implemented (Production-Ready) ✅
+### What's Implemented (Production-Ready)
 
 **Infrastructure & Orchestration:**
 - Kubernetes with HPA, network policies, and service mesh ready
@@ -289,7 +255,7 @@ This platform demonstrates **world-class data engineering and ML infrastructure 
 - Real-time metrics visualization
 - Responsive and accessible UI
 
-### ML Integration Points (Architecture Ready) 🔧
+### ML Integration Points (Architecture Ready)
 
 The following components are structured and ready for ML model deployment:
 - ML inference endpoints defined with proper request/response schemas
@@ -301,7 +267,7 @@ The following components are structured and ready for ML model deployment:
 
 ---
 
-## 🎯 Features
+## Features
 
 - **Real-time Fish Classification**: Process underwater camera feeds with low latency
 - **Scalable Architecture**: Kubernetes-based microservices that scale horizontally
@@ -311,7 +277,7 @@ The following components are structured and ready for ML model deployment:
 - **Observability**: Prometheus metrics, Grafana dashboards, distributed tracing
 - **CI/CD**: Jenkins Kubernetes pipeline with security scanning, multi-environment deployment
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -334,7 +300,7 @@ The following components are structured and ready for ML model deployment:
    └─────────┘ └────────┘ └────────┘
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -347,9 +313,9 @@ The following components are structured and ready for ML model deployment:
 
 1. **Clone and setup**:
 ```bash
-git clone <your-repo>
-cd aquaculture-ml-platform
-cp .env.example .env
+git clone https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform.git
+cd Aquaculture_Machine_Learning_Platform
+cp env.example .env
 ```
 
 2. **Start all services**:
@@ -365,7 +331,8 @@ curl http://localhost:8000/health
 4. **Access services**:
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
-- Grafana: http://localhost:3000 (admin/admin)
+- Frontend: http://localhost:3000
+- Grafana: http://localhost:3001 (admin/admin)
 - Prometheus: http://localhost:9090
 
 ### Development Setup
@@ -388,109 +355,89 @@ flake8 .
 mypy .
 ```
 
-## 📦 Services
+## API Endpoints
+
+### Authentication Endpoints
+- `POST /auth/register` - User registration
+- `POST /auth/login` - User login with JWT token
+- `GET /auth/me` - Get current user information
+
+### Fish Classification Endpoints
+- `POST /predictions/classify` - Upload image for fish species classification
+- `GET /predictions/history` - Get user's prediction history
+- `GET /predictions/species` - List all supported fish species
+- `GET /predictions/stats` - Get user's prediction statistics
+
+### ML Model Management
+- `GET /models/active` - Get active ML model information
+- `GET /models/all` - List all available ML models
+- `GET /models/stats` - Get model performance statistics
+- `GET /models/health` - Check ML model health status
+
+### ML Inference Endpoints
+- `POST /ml/predict` - Synchronous image prediction
+- `POST /ml/predict/async` - Asynchronous image prediction
+- `POST /ml/predict/batch` - Batch image prediction
+- `GET /ml/models` - List available model versions
+- `GET /ml/models/{version}` - Get specific model details
+
+### Task Management
+- `GET /tasks/{task_id}` - Get task status and results
+- `DELETE /tasks/{task_id}` - Cancel running task
+- `GET /tasks/` - List tasks with filtering and pagination
+
+### System Monitoring
+- `GET /health` - Basic health check
+- `GET /health/detailed` - Detailed health with dependencies
+- `GET /ready` - Kubernetes readiness probe
+- `GET /live` - Kubernetes liveness probe
+- `GET /metrics/performance` - Real-time performance metrics
+- `POST /metrics/performance/reset` - Reset performance counters
+
+## Services
 
 ### API Service
 - **Port**: 8000
-- **Tech**: FastAPI, Pydantic, JWT
-- **Features**: Authentication, rate limiting, API versioning
+- **Tech**: FastAPI, Pydantic, JWT, SQLAlchemy
+- **Features**: Authentication, rate limiting, API versioning, health checks
 
 ### ML Service
 - **Port**: 8001
-- **Tech**: PyTorch, TorchServe
-- **Features**: Model serving, batch inference, A/B testing
+- **Tech**: PyTorch, PIL, NumPy
+- **Features**: Fish species classification, model management, batch processing
 
 ### Worker Service
 - **Tech**: Celery, Kafka
-- **Features**: Async task processing, stream processing
+- **Features**: Async task processing, background jobs, distributed processing
+
+### Frontend Service
+- **Port**: 3000
+- **Tech**: React 18, TypeScript, Material-UI
+- **Features**: Image upload, prediction results, user dashboard
 
 ### Data Pipeline
-- **Tech**: Apache Kafka, PostgreSQL
-- **Features**: Real-time data ingestion, ETL
+- **Tech**: Apache Kafka, PostgreSQL, Redis
+- **Features**: Real-time data ingestion, caching, message queuing
 
-## 🗄️ Database Schema
+## Database Schema
 
 ### PostgreSQL Tables
 - `users`: User accounts and authentication
-- `fish_species`: Fish species metadata
-- `predictions`: Model predictions and results
-- `models`: ML model versions and metadata
-- `audit_logs`: System audit trail
+- `fish_species`: Fish species metadata and optimal conditions
+- `models`: ML model versions and performance metrics
+- `predictions`: Model predictions and inference results
+- `audit_logs`: System audit trail and security events
 
 ### Redis Keys
-- `cache:*`: Cached API responses
-- `ratelimit:*`: Rate limiting counters
-- `session:*`: User sessions
+- `cache:*`: Cached API responses and computed results
+- `ratelimit:*`: Rate limiting counters per user/endpoint
+- `session:*`: User sessions and temporary data
 
-## 🔧 Configuration
-
-Configuration is managed through environment variables and config files:
-
-- `.env`: Local development settings
-- `config/production.yaml`: Production configuration
-- `config/staging.yaml`: Staging configuration
-
-Key environment variables:
-```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/aquaculture
-REDIS_URL=redis://localhost:6379/0
-
-# Security
-SECRET_KEY=your-secret-key-here
-JWT_SECRET=your-jwt-secret-here
-
-# ML
-MODEL_PATH=/models/fish_classifier_v1.pth
-BATCH_SIZE=32
-
-# Monitoring
-PROMETHEUS_ENABLED=true
-LOG_LEVEL=INFO
-```
-
-## 🧪 Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=services --cov-report=html
-
-# Run specific test suite
-pytest tests/unit/
-pytest tests/integration/
-
-# Run load tests
-locust -f tests/load/locustfile.py
-```
-
-## 📊 Monitoring
-
-### Metrics
-- Request latency (p50, p95, p99)
-- Throughput (requests/second)
-- Error rates
-- Model inference time
-- Database query performance
-
-### Dashboards
-- System Overview: `monitoring/grafana/dashboards/overview.json`
-- API Performance: `monitoring/grafana/dashboards/api.json`
-- ML Metrics: `monitoring/grafana/dashboards/ml.json`
-
-### Alerts
-- High error rate (>5%)
-- High latency (p95 > 500ms)
-- Low throughput (<100 req/s)
-- Model performance degradation
-
-## 🚀 Jenkins CI/CD Pipeline
+## Jenkins CI/CD Pipeline
 
 ### Sophisticated Kubernetes Integration
 
-The platform features a **production-grade Jenkins CI/CD pipeline** with advanced Kubernetes integration:
+The platform features a production-grade Jenkins CI/CD pipeline with advanced Kubernetes integration:
 
 #### Pipeline Features
 - **Dynamic Kubernetes Agents**: Jenkins agents run as pods in Kubernetes cluster
@@ -522,11 +469,11 @@ The platform features a **production-grade Jenkins CI/CD pipeline** with advance
 - [RBAC Configuration](jenkins/jenkins-rbac.yaml)
 - [Pipeline Definition](jenkins/Jenkinsfile)
 
-## 🏗️ Enterprise Terraform Infrastructure
+## Enterprise Terraform Infrastructure
 
 ### Sophisticated AWS Infrastructure
 
-The platform features **enterprise-grade Terraform infrastructure** designed for production-scale ML workloads:
+The platform features enterprise-grade Terraform infrastructure designed for production-scale ML workloads:
 
 #### Core Infrastructure
 - **VPC Architecture**: Multi-AZ Virtual Private Cloud with public/private/database subnets
@@ -575,7 +522,7 @@ The platform features **enterprise-grade Terraform infrastructure** designed for
 - [Enterprise Features Guide](docs/TERRAFORM_COMPLETE_GUIDE.md)
 - [Environment Configuration](infrastructure/terraform/locals.tf)
 
-## 🚢 Deployment
+## Deployment
 
 ### Docker Compose (Development)
 ```bash
@@ -596,7 +543,7 @@ kubectl logs -f deployment/api-service -n aquaculture
 
 ### Terraform (Enterprise Infrastructure)
 
-The platform features **sophisticated Terraform infrastructure** with enterprise-grade capabilities:
+The platform features sophisticated Terraform infrastructure with enterprise-grade capabilities:
 
 #### Infrastructure Components
 - **VPC**: Multi-AZ Virtual Private Cloud with public/private/database subnets
@@ -647,43 +594,71 @@ terraform apply -var-file="production.tfvars"
 - [Configuration Examples](infrastructure/terraform/terraform.tfvars.example)
 - [Enterprise Features Documentation](docs/TERRAFORM_COMPLETE_GUIDE.md)
 
-### GitHub Actions Secrets
+## Configuration
 
-The CI/CD pipeline requires the following secrets to be configured in your GitHub repository:
+Configuration is managed through environment variables and config files:
 
-#### Required Secrets
-- `SLACK_WEBHOOK_URL`: Slack webhook URL for CI/CD notifications
-- `KUBE_CONFIG_PRODUCTION`: Kubernetes config for production deployment
-- `KUBE_CONFIG_STAGING`: Kubernetes config for staging deployment
+- `.env`: Local development settings
+- `config/production.yaml`: Production configuration
+- `config/staging.yaml`: Staging configuration
 
-#### Optional Secrets
-- `DOCKER_REGISTRY_TOKEN`: Token for private Docker registry (if using)
-- `SONAR_TOKEN`: SonarCloud token for code quality analysis (if enabled)
+Key environment variables:
+```bash
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/aquaculture_db
+REDIS_URL=redis://localhost:6379/0
 
-#### Setting up Secrets
-1. Go to your GitHub repository
-2. Navigate to Settings → Secrets and variables → Actions
-3. Click "New repository secret"
-4. Add each required secret with its corresponding value
+# Security
+SECRET_KEY=your-secret-key-here
+JWT_SECRET=your-jwt-secret-here
 
-**Example Slack Webhook Setup:**
-1. Create a Slack app at https://api.slack.com/apps
-2. Add incoming webhook integration
-3. Copy the webhook URL
-4. Add it as `SLACK_WEBHOOK_URL` secret in GitHub
+# ML
+MODEL_PATH=/models/fish_classifier_v1.pth
+BATCH_SIZE=32
 
-## 🔐 Security
+# Monitoring
+PROMETHEUS_ENABLED=true
+LOG_LEVEL=INFO
+```
 
-- JWT-based authentication
-- API key management
-- Rate limiting (100 req/min per user)
-- Input validation with Pydantic
-- SQL injection protection (SQLAlchemy ORM)
-- CORS configuration
-- TLS/SSL in production
-- Secret management with environment variables
+## Testing
 
-## 📈 Performance
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=services --cov-report=html
+
+# Run specific test suite
+pytest tests/unit/
+pytest tests/integration/
+
+# Run load tests
+locust -f tests/load/locustfile.py
+```
+
+## Monitoring
+
+### Metrics
+- Request latency (p50, p95, p99)
+- Throughput (requests/second)
+- Error rates
+- Model inference time
+- Database query performance
+
+### Dashboards
+- System Overview: `monitoring/grafana/dashboards/overview.json`
+- API Performance: `monitoring/grafana/dashboards/api.json`
+- ML Metrics: `monitoring/grafana/dashboards/ml.json`
+
+### Alerts
+- High error rate (>5%)
+- High latency (p95 > 500ms)
+- Low throughput (<100 req/s)
+- Model performance degradation
+
+## Performance
 
 ### Real-time Metrics
 
@@ -732,7 +707,18 @@ Actual performance depends on:
 - Batch processing for high throughput (32 images/batch)
 - Horizontal pod autoscaling (3-20 replicas)
 
-## 🛠️ Development
+## Security
+
+- JWT-based authentication
+- API key management
+- Rate limiting (100 req/min per user)
+- Input validation with Pydantic
+- SQL injection protection (SQLAlchemy ORM)
+- CORS configuration
+- TLS/SSL in production
+- Secret management with environment variables
+
+## Development
 
 ### Code Style
 - Black for formatting
@@ -756,16 +742,16 @@ Actual performance depends on:
 - `perf:` Performance improvement
 - `chore:` Maintenance
 
-## 📚 Documentation
+## Documentation
 
 - [Getting Started](docs/GETTING_STARTED.md) - Quick start guide
 - [Setup Guide](docs/SETUP.md) - Detailed setup instructions
 - [Phase 1 Complete](docs/PHASE1_COMPLETE.md) - What's included and achievements
 - [API Reference](http://localhost:8000/docs) - Interactive API documentation
-- [Architecture](docs/architecture.md) - System architecture (coming soon)
-- [Database Schema](docs/database.md) - Database design (coming soon)
+- [Learning Checklist](docs/LEARNING_CHECKLIST.md) - System features overview
+- [Development Roadmap](docs/DEVELOPMENT_ROADMAP.md) - Future development plans
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch
@@ -773,20 +759,20 @@ Actual performance depends on:
 4. Push to the branch
 5. Create a Pull Request
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details
 
-## 👥 Team
+## Team
 
 Built for sustainable aquaculture and precision fish farming.
 
-## 🔗 Links
+## Links
 
 - [Documentation](docs/)
-- [Issue Tracker](issues/)
+- [Issue Tracker](https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform/issues)
 - [Changelog](CHANGELOG.md)
 
 ---
 
-**Status**: ✅ Production Ready | **Version**: 1.1.0 "Poseidon" | **Last Updated**: October 2024
+**Status**: Production Ready | **Version**: 1.1.0 "Poseidon" | **Last Updated**: October 2024
