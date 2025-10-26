@@ -115,3 +115,4 @@ secrets/
 *-report.json
 *-report.html
 *-report.xml
+jenkins-cli.jar
