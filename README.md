@@ -69,6 +69,7 @@ This platform demonstrates **world-class data engineering and ML infrastructure 
 
 **DevOps & Automation:**
 - GitHub Actions CI/CD with multi-stage pipeline
+- **Jenkins CI/CD with Kubernetes integration (v1.1.0)**
 - Automated testing (unit, integration, load)
 - Security scanning with Trivy
 - Blue-green deployment support

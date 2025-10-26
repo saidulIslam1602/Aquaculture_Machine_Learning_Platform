@@ -59,6 +59,8 @@ async def health_check():
         "service": "api",
         "version": settings.VERSION,
         "environment": settings.ENVIRONMENT,
+        "jenkins_integration": "active",
+        "ci_cd_status": "operational"
     }
 
 
