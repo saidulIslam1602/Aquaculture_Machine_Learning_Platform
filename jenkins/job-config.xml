@@ -38,7 +38,7 @@
       <configVersion>2</configVersion>
       <userRemoteConfigs>
         <hudson.plugins.git.UserRemoteConfig>
-          <url>file:///home/saidul/Desktop/Aquaculture_Machine_Learning_Platform</url>
+          <url>https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform.git</url>
         </hudson.plugins.git.UserRemoteConfig>
       </userRemoteConfigs>
       <branches>
