@@ -63,9 +63,37 @@ const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost
 // Request timeout in milliseconds (30 seconds for ML predictions)
 const API_TIMEOUT = 30000;
 
-// TODO: Implement retry logic with exponential backoff
-// const MAX_RETRY_ATTEMPTS = 3;
-// const RETRY_DELAY = 1000;
+// Retry configuration for failed requests
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_DELAY = 1000;
+
+// Exponential backoff retry logic
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  attempt: number = 1
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error: any) {
+    if (attempt >= MAX_RETRY_ATTEMPTS) {
+      throw error;
+    }
+    
+    // Only retry on network errors or 5xx server errors
+    const shouldRetry = !error.response || 
+                       (error.response.status >= 500 && error.response.status < 600);
+    
+    if (!shouldRetry) {
+      throw error;
+    }
+    
+    const delay = RETRY_DELAY * Math.pow(2, attempt - 1); // Exponential backoff
+    await sleep(delay);
+    return retryWithBackoff(fn, attempt + 1);
+  }
+};
 
 /**
  * API Client Class
@@ -237,6 +265,13 @@ class APIClient {
     const response = await this.client.get('/api/v1/tasks/', {
       params: { status_filter: statusFilter, page },
     });
+    return response.data;
+  }
+
+  // Metrics Endpoints
+
+  async getPerformanceMetrics(): Promise<any> {
+    const response = await this.client.get('/api/v1/metrics/performance');
     return response.data;
   }
 }

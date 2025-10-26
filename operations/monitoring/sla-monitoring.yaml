@@ -1,0 +1,807 @@
+# ============================================================================
+# ENTERPRISE SLA MONITORING CONFIGURATION
+# ============================================================================
+#
+# This configuration implements comprehensive SLA monitoring for:
+# - Service availability and uptime tracking
+# - Performance metrics and latency monitoring
+# - Error rate tracking and alerting
+# - Business metrics and KPI monitoring
+# - Compliance and audit trail generation
+# - Multi-tier SLA management (Bronze, Silver, Gold, Platinum)
+#
+# ENTERPRISE FEATURES:
+# - Real-time SLA compliance tracking
+# - Automated SLA breach notifications
+# - Customer-specific SLA monitoring
+# - Enterprise reporting and dashboards
+# - Compliance audit trails
+# - Service credit calculation automation
+# ============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enterprise-sla-config
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-monitoring
+    app.kubernetes.io/component: configuration
+    enterprise.monitoring/sla: "enabled"
+  annotations:
+    enterprise.monitoring.io/description: "Enterprise SLA monitoring configuration"
+    enterprise.monitoring.io/compliance: "sox-gdpr"
+    enterprise.monitoring.io/owner: "sre-team@enterprise.local"
+data:
+  sla-config.yaml: |
+    # Enterprise SLA Configuration
+    enterprise:
+      name: "Aquaculture ML Platform"
+      version: "1.0.0"
+      environment: "production"
+      compliance:
+        sox: true
+        gdpr: true
+        iso27001: true
+      
+    # SLA Tiers and Objectives
+    sla_tiers:
+      platinum:
+        availability: 99.99  # 4.32 minutes downtime/month
+        api_latency_p95: 100  # milliseconds
+        api_latency_p99: 200  # milliseconds
+        error_rate: 0.01      # 0.01%
+        ml_inference_time: 1000  # milliseconds
+        support_response: 15  # minutes
+        service_credits: 25   # % of monthly fee
+        
+      gold:
+        availability: 99.95   # 21.6 minutes downtime/month
+        api_latency_p95: 200  # milliseconds
+        api_latency_p99: 500  # milliseconds
+        error_rate: 0.05      # 0.05%
+        ml_inference_time: 2000  # milliseconds
+        support_response: 60  # minutes
+        service_credits: 15   # % of monthly fee
+        
+      silver:
+        availability: 99.9    # 43.2 minutes downtime/month
+        api_latency_p95: 500  # milliseconds
+        api_latency_p99: 1000 # milliseconds
+        error_rate: 0.1       # 0.1%
+        ml_inference_time: 3000  # milliseconds
+        support_response: 240 # minutes
+        service_credits: 10   # % of monthly fee
+        
+      bronze:
+        availability: 99.5    # 3.6 hours downtime/month
+        api_latency_p95: 1000 # milliseconds
+        api_latency_p99: 2000 # milliseconds
+        error_rate: 0.5       # 0.5%
+        ml_inference_time: 5000  # milliseconds
+        support_response: 480 # minutes
+        service_credits: 5    # % of monthly fee
+    
+    # Monitoring Configuration
+    monitoring:
+      collection_interval: "30s"
+      evaluation_interval: "1m"
+      retention_period: "90d"
+      
+      # Prometheus queries for SLA metrics
+      queries:
+        availability:
+          query: 'avg_over_time(up{job="aquaculture-api"}[5m])'
+          threshold_operator: "<"
+          
+        api_latency_p95:
+          query: 'histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m]))'
+          threshold_operator: ">"
+          
+        api_latency_p99:
+          query: 'histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m]))'
+          threshold_operator: ">"
+          
+        error_rate:
+          query: 'rate(http_requests_total{job="aquaculture-api",status=~"5.."}[5m]) / rate(http_requests_total{job="aquaculture-api"}[5m])'
+          threshold_operator: ">"
+          
+        ml_inference_time:
+          query: 'histogram_quantile(0.95, rate(ml_inference_duration_seconds_bucket{job="aquaculture-ml"}[5m]))'
+          threshold_operator: ">"
+    
+    # Customer SLA Assignments
+    customers:
+      enterprise_001:
+        name: "Enterprise Customer Alpha"
+        tier: "platinum"
+        contract_start: "2024-01-01"
+        contract_end: "2024-12-31"
+        custom_slas:
+          availability: 99.995  # Custom higher availability
+        
+      enterprise_002:
+        name: "Enterprise Customer Beta"
+        tier: "gold"
+        contract_start: "2024-03-01"
+        contract_end: "2025-02-28"
+        
+      enterprise_003:
+        name: "Enterprise Customer Gamma"
+        tier: "silver"
+        contract_start: "2024-06-01"
+        contract_end: "2025-05-31"
+    
+    # Alerting Configuration
+    alerting:
+      channels:
+        critical:
+          - pagerduty
+          - slack_incidents
+          - email_executives
+        warning:
+          - slack_alerts
+          - email_team
+        info:
+          - slack_monitoring
+      
+      escalation:
+        level_1: "sre-team@enterprise.local"
+        level_2: "engineering-leads@enterprise.local"
+        level_3: "vp-engineering@enterprise.local"
+        level_4: "cto@enterprise.local"
+    
+    # Reporting Configuration
+    reporting:
+      frequency: "monthly"
+      recipients:
+        - "customer-success@enterprise.local"
+        - "account-managers@enterprise.local"
+        - "executives@enterprise.local"
+      
+      formats:
+        - "pdf"
+        - "json"
+        - "csv"
+      
+      delivery:
+        - "email"
+        - "s3_bucket"
+        - "customer_portal"
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: enterprise-sla-rules
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-monitoring
+    app.kubernetes.io/component: prometheus-rules
+    enterprise.monitoring/sla: "enabled"
+spec:
+  groups:
+    - name: enterprise.sla.availability
+      interval: 30s
+      rules:
+        # Service Availability Rules
+        - alert: EnterpriseSLAAvailabilityBreach
+          expr: |
+            (
+              avg_over_time(up{job="aquaculture-api"}[5m]) < 0.999
+            ) * 100
+          for: 1m
+          labels:
+            severity: critical
+            sla_metric: availability
+            enterprise_alert: "true"
+            compliance_required: "true"
+          annotations:
+            summary: "Enterprise SLA availability breach detected"
+            description: |
+              Service availability has fallen below SLA threshold.
+              Current availability: {{ $value }}%
+              SLA threshold: 99.9%
+              Impact: All enterprise customers affected
+              Action: Immediate investigation required
+            runbook_url: "https://runbooks.enterprise.local/sla-breach-availability"
+            customer_impact: "high"
+            
+        - alert: EnterpriseSLAAvailabilityWarning
+          expr: |
+            (
+              avg_over_time(up{job="aquaculture-api"}[5m]) < 0.9995
+              and
+              avg_over_time(up{job="aquaculture-api"}[5m]) >= 0.999
+            ) * 100
+          for: 2m
+          labels:
+            severity: warning
+            sla_metric: availability
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise SLA availability approaching threshold"
+            description: |
+              Service availability is approaching SLA breach threshold.
+              Current availability: {{ $value }}%
+              Warning threshold: 99.95%
+              Action: Monitor closely and prepare mitigation
+            
+    - name: enterprise.sla.performance
+      interval: 30s
+      rules:
+        # API Latency Rules
+        - alert: EnterpriseSLALatencyBreach
+          expr: |
+            histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m])) * 1000 > 500
+          for: 2m
+          labels:
+            severity: critical
+            sla_metric: api_latency_p95
+            enterprise_alert: "true"
+            compliance_required: "true"
+          annotations:
+            summary: "Enterprise SLA API latency breach"
+            description: |
+              API P95 latency has exceeded SLA threshold.
+              Current P95 latency: {{ $value }}ms
+              SLA threshold: 200ms (Gold tier)
+              Impact: Customer experience degraded
+              Action: Performance investigation required
+            runbook_url: "https://runbooks.enterprise.local/sla-breach-latency"
+            
+        - alert: EnterpriseSLALatencyP99Breach
+          expr: |
+            histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job="aquaculture-api"}[5m])) * 1000 > 1000
+          for: 2m
+          labels:
+            severity: warning
+            sla_metric: api_latency_p99
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise SLA API P99 latency breach"
+            description: |
+              API P99 latency has exceeded SLA threshold.
+              Current P99 latency: {{ $value }}ms
+              SLA threshold: 500ms (Gold tier)
+              
+        # ML Inference Performance Rules
+        - alert: EnterpriseSLAMLInferenceBreach
+          expr: |
+            histogram_quantile(0.95, rate(ml_inference_duration_seconds_bucket{job="aquaculture-ml"}[5m])) * 1000 > 3000
+          for: 2m
+          labels:
+            severity: critical
+            sla_metric: ml_inference_time
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise SLA ML inference time breach"
+            description: |
+              ML inference time has exceeded SLA threshold.
+              Current inference time: {{ $value }}ms
+              SLA threshold: 2000ms (Gold tier)
+              Impact: ML predictions delayed
+              
+    - name: enterprise.sla.errors
+      interval: 30s
+      rules:
+        # Error Rate Rules
+        - alert: EnterpriseSLAErrorRateBreach
+          expr: |
+            (
+              rate(http_requests_total{job="aquaculture-api",status=~"5.."}[5m]) / 
+              rate(http_requests_total{job="aquaculture-api"}[5m])
+            ) * 100 > 0.1
+          for: 1m
+          labels:
+            severity: critical
+            sla_metric: error_rate
+            enterprise_alert: "true"
+            compliance_required: "true"
+          annotations:
+            summary: "Enterprise SLA error rate breach"
+            description: |
+              API error rate has exceeded SLA threshold.
+              Current error rate: {{ $value }}%
+              SLA threshold: 0.05% (Gold tier)
+              Impact: Customer requests failing
+              Action: Immediate error investigation required
+            runbook_url: "https://runbooks.enterprise.local/sla-breach-errors"
+            
+        - alert: EnterpriseSLAErrorRateWarning
+          expr: |
+            (
+              rate(http_requests_total{job="aquaculture-api",status=~"5.."}[5m]) / 
+              rate(http_requests_total{job="aquaculture-api"}[5m])
+            ) * 100 > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            sla_metric: error_rate
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise SLA error rate elevated"
+            description: |
+              API error rate is elevated above normal levels.
+              Current error rate: {{ $value }}%
+              Warning threshold: 0.05%
+              
+    - name: enterprise.sla.business
+      interval: 60s
+      rules:
+        # Business Metrics Rules
+        - alert: EnterpriseSLABusinessImpact
+          expr: |
+            (
+              sum(rate(http_requests_total{job="aquaculture-api",status=~"2.."}[5m])) /
+              sum(rate(http_requests_total{job="aquaculture-api"}[5m]))
+            ) * 100 < 95
+          for: 5m
+          labels:
+            severity: warning
+            sla_metric: business_success_rate
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise business success rate below threshold"
+            description: |
+              Business transaction success rate has dropped.
+              Current success rate: {{ $value }}%
+              Threshold: 95%
+              Impact: Revenue and customer satisfaction affected
+              
+        - alert: EnterpriseSLACustomerExperience
+          expr: |
+            avg(rate(customer_satisfaction_score[5m])) < 4.0
+          for: 10m
+          labels:
+            severity: warning
+            sla_metric: customer_satisfaction
+            enterprise_alert: "true"
+          annotations:
+            summary: "Enterprise customer satisfaction below target"
+            description: |
+              Customer satisfaction score has dropped below target.
+              Current score: {{ $value }}
+              Target: 4.0/5.0
+              Impact: Customer retention risk
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: enterprise-sla-exporter
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+    enterprise.monitoring/sla: "enabled"
+spec:
+  selector:
+    app: enterprise-sla-exporter
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: enterprise-sla-exporter
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+    enterprise.monitoring/sla: "enabled"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: enterprise-sla-exporter
+  template:
+    metadata:
+      labels:
+        app: enterprise-sla-exporter
+        enterprise.monitoring/sla: "enabled"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: enterprise-sla-exporter
+      containers:
+        - name: sla-exporter
+          image: python:3.10-slim
+          ports:
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: PROMETHEUS_URL
+              value: "http://prometheus.monitoring:9090"
+            - name: SLA_CONFIG_PATH
+              value: "/config/sla-config.yaml"
+            - name: ENTERPRISE_MODE
+              value: "true"
+            - name: COMPLIANCE_LOGGING
+              value: "true"
+          volumeMounts:
+            - name: sla-config
+              mountPath: /config
+              readOnly: true
+            - name: sla-exporter-code
+              mountPath: /app
+              readOnly: true
+          command:
+            - python
+            - /app/sla_exporter.py
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: sla-config
+          configMap:
+            name: enterprise-sla-config
+        - name: sla-exporter-code
+          configMap:
+            name: enterprise-sla-exporter-code
+            defaultMode: 0755
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: enterprise-sla-exporter
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: enterprise-sla-exporter
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors", "prometheusrules"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: enterprise-sla-exporter
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: enterprise-sla-exporter
+subjects:
+  - kind: ServiceAccount
+    name: enterprise-sla-exporter
+    namespace: aquaculture-platform
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: enterprise-sla-exporter-code
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: sla-exporter
+    app.kubernetes.io/component: monitoring
+data:
+  sla_exporter.py: |
+    #!/usr/bin/env python3
+    """
+    Enterprise SLA Exporter
+    
+    This service monitors SLA compliance and exports metrics for enterprise customers.
+    It provides real-time SLA tracking, breach detection, and compliance reporting.
+    """
+    
+    import os
+    import time
+    import yaml
+    import json
+    import logging
+    from datetime import datetime, timedelta
+    from typing import Dict, List, Optional
+    
+    import requests
+    from prometheus_client import start_http_server, Gauge, Counter, Histogram
+    from prometheus_client.core import CollectorRegistry
+    
+    # Configure enterprise logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "service": "sla-exporter", "enterprise": true}',
+        datefmt='%Y-%m-%dT%H:%M:%S'
+    )
+    logger = logging.getLogger(__name__)
+    
+    # Enterprise Prometheus metrics
+    registry = CollectorRegistry()
+    
+    # SLA Compliance Metrics
+    sla_compliance_gauge = Gauge(
+        'enterprise_sla_compliance_ratio',
+        'SLA compliance ratio by customer and metric',
+        ['customer_id', 'customer_name', 'tier', 'metric', 'period'],
+        registry=registry
+    )
+    
+    sla_breach_counter = Counter(
+        'enterprise_sla_breaches_total',
+        'Total number of SLA breaches',
+        ['customer_id', 'customer_name', 'tier', 'metric', 'severity'],
+        registry=registry
+    )
+    
+    sla_availability_gauge = Gauge(
+        'enterprise_sla_availability_percent',
+        'Service availability percentage',
+        ['customer_id', 'customer_name', 'tier', 'period'],
+        registry=registry
+    )
+    
+    sla_latency_gauge = Gauge(
+        'enterprise_sla_latency_milliseconds',
+        'API latency in milliseconds',
+        ['customer_id', 'customer_name', 'tier', 'percentile'],
+        registry=registry
+    )
+    
+    sla_error_rate_gauge = Gauge(
+        'enterprise_sla_error_rate_percent',
+        'API error rate percentage',
+        ['customer_id', 'customer_name', 'tier'],
+        registry=registry
+    )
+    
+    # Service Credit Metrics
+    service_credits_gauge = Gauge(
+        'enterprise_service_credits_percent',
+        'Service credits owed to customers',
+        ['customer_id', 'customer_name', 'tier', 'period'],
+        registry=registry
+    )
+    
+    class EnterpriseSLAExporter:
+        def __init__(self, config_path: str, prometheus_url: str):
+            self.config_path = config_path
+            self.prometheus_url = prometheus_url
+            self.config = self.load_config()
+            
+        def load_config(self) -> Dict:
+            """Load SLA configuration from YAML file."""
+            try:
+                with open(self.config_path, 'r') as f:
+                    config = yaml.safe_load(f)
+                logger.info("SLA configuration loaded successfully")
+                return config
+            except Exception as e:
+                logger.error(f"Failed to load SLA configuration: {e}")
+                raise
+                
+        def query_prometheus(self, query: str) -> Optional[float]:
+            """Query Prometheus and return metric value."""
+            try:
+                response = requests.get(
+                    f"{self.prometheus_url}/api/v1/query",
+                    params={'query': query},
+                    timeout=30
+                )
+                response.raise_for_status()
+                
+                data = response.json()
+                if data['status'] == 'success' and data['data']['result']:
+                    return float(data['data']['result'][0]['value'][1])
+                return None
+                
+            except Exception as e:
+                logger.error(f"Prometheus query failed: {query}, error: {e}")
+                return None
+                
+        def calculate_sla_compliance(self, customer_id: str, metric: str, period: str = '30d') -> Dict:
+            """Calculate SLA compliance for a specific customer and metric."""
+            customer = self.config['customers'][customer_id]
+            tier = customer['tier']
+            sla_target = self.config['sla_tiers'][tier][metric]
+            
+            # Get the appropriate Prometheus query
+            query_config = self.config['monitoring']['queries'][metric]
+            query = query_config['query']
+            
+            # Modify query for time period
+            if period != '5m':
+                query = query.replace('[5m]', f'[{period}]')
+                
+            current_value = self.query_prometheus(query)
+            
+            if current_value is None:
+                logger.warning(f"No data available for {customer_id} {metric}")
+                return {
+                    'compliant': False,
+                    'current_value': None,
+                    'target_value': sla_target,
+                    'compliance_ratio': 0.0
+                }
+            
+            # Determine compliance based on threshold operator
+            threshold_operator = query_config['threshold_operator']
+            
+            if threshold_operator == '<':
+                compliant = current_value >= sla_target
+                compliance_ratio = min(current_value / sla_target, 1.0) if sla_target > 0 else 1.0
+            else:  # '>'
+                compliant = current_value <= sla_target
+                compliance_ratio = min(sla_target / current_value, 1.0) if current_value > 0 else 1.0
+                
+            return {
+                'compliant': compliant,
+                'current_value': current_value,
+                'target_value': sla_target,
+                'compliance_ratio': compliance_ratio
+            }
+            
+        def calculate_service_credits(self, customer_id: str, period: str = '30d') -> float:
+            """Calculate service credits owed to customer based on SLA breaches."""
+            customer = self.config['customers'][customer_id]
+            tier = customer['tier']
+            
+            # Check availability compliance (primary SLA metric)
+            availability_compliance = self.calculate_sla_compliance(customer_id, 'availability', period)
+            
+            if availability_compliance['compliant']:
+                return 0.0
+                
+            # Calculate service credits based on tier
+            service_credit_rate = self.config['sla_tiers'][tier]['service_credits']
+            
+            # Calculate downtime percentage
+            availability_percent = availability_compliance['current_value'] * 100
+            target_percent = availability_compliance['target_value'] * 100
+            
+            downtime_percent = target_percent - availability_percent
+            
+            # Service credits are proportional to downtime severity
+            if downtime_percent > 0.1:  # More than 0.1% downtime
+                return service_credit_rate
+            elif downtime_percent > 0.05:  # More than 0.05% downtime
+                return service_credit_rate * 0.5
+            else:
+                return 0.0
+                
+        def update_metrics(self):
+            """Update all SLA metrics for enterprise monitoring."""
+            logger.info("Updating enterprise SLA metrics")
+            
+            for customer_id, customer_config in self.config['customers'].items():
+                customer_name = customer_config['name']
+                tier = customer_config['tier']
+                
+                # Update SLA compliance metrics for each monitored metric
+                for metric in ['availability', 'api_latency_p95', 'error_rate', 'ml_inference_time']:
+                    for period in ['5m', '1h', '24h', '30d']:
+                        compliance = self.calculate_sla_compliance(customer_id, metric, period)
+                        
+                        # Update compliance ratio
+                        sla_compliance_gauge.labels(
+                            customer_id=customer_id,
+                            customer_name=customer_name,
+                            tier=tier,
+                            metric=metric,
+                            period=period
+                        ).set(compliance['compliance_ratio'])
+                        
+                        # Update specific metric gauges
+                        if metric == 'availability' and compliance['current_value'] is not None:
+                            sla_availability_gauge.labels(
+                                customer_id=customer_id,
+                                customer_name=customer_name,
+                                tier=tier,
+                                period=period
+                            ).set(compliance['current_value'] * 100)
+                            
+                        elif metric == 'api_latency_p95' and compliance['current_value'] is not None:
+                            sla_latency_gauge.labels(
+                                customer_id=customer_id,
+                                customer_name=customer_name,
+                                tier=tier,
+                                percentile='p95'
+                            ).set(compliance['current_value'] * 1000)  # Convert to milliseconds
+                            
+                        elif metric == 'error_rate' and compliance['current_value'] is not None:
+                            sla_error_rate_gauge.labels(
+                                customer_id=customer_id,
+                                customer_name=customer_name,
+                                tier=tier
+                            ).set(compliance['current_value'] * 100)  # Convert to percentage
+                        
+                        # Record SLA breach if not compliant
+                        if not compliance['compliant'] and period == '5m':
+                            sla_breach_counter.labels(
+                                customer_id=customer_id,
+                                customer_name=customer_name,
+                                tier=tier,
+                                metric=metric,
+                                severity='warning'
+                            ).inc()
+                            
+                            logger.warning(
+                                f"SLA breach detected: customer={customer_id}, metric={metric}, "
+                                f"current={compliance['current_value']}, target={compliance['target_value']}"
+                            )
+                
+                # Calculate and update service credits
+                service_credits = self.calculate_service_credits(customer_id, '30d')
+                service_credits_gauge.labels(
+                    customer_id=customer_id,
+                    customer_name=customer_name,
+                    tier=tier,
+                    period='30d'
+                ).set(service_credits)
+                
+                if service_credits > 0:
+                    logger.warning(
+                        f"Service credits owed: customer={customer_id}, credits={service_credits}%"
+                    )
+                    
+        def run(self):
+            """Main execution loop for SLA monitoring."""
+            logger.info("Starting Enterprise SLA Exporter")
+            
+            # Start Prometheus metrics server
+            start_http_server(9090, registry=registry)
+            logger.info("Prometheus metrics server started on port 9090")
+            
+            while True:
+                try:
+                    self.update_metrics()
+                    time.sleep(60)  # Update every minute
+                    
+                except Exception as e:
+                    logger.error(f"Error updating SLA metrics: {e}")
+                    time.sleep(30)  # Shorter retry interval on error
+                    
+    if __name__ == "__main__":
+        config_path = os.getenv('SLA_CONFIG_PATH', '/config/sla-config.yaml')
+        prometheus_url = os.getenv('PROMETHEUS_URL', 'http://prometheus.monitoring:9090')
+        
+        exporter = EnterpriseSLAExporter(config_path, prometheus_url)
+        exporter.run()
+
+  requirements.txt: |
+    requests==2.31.0
+    PyYAML==6.0.1
+    prometheus-client==0.19.0

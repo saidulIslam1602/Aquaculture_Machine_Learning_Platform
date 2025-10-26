@@ -1,0 +1,289 @@
+# ============================================================================
+# Enterprise Dependencies for Aquaculture ML Platform
+# ============================================================================
+#
+# This file contains enterprise-specific dependencies required for:
+# - Enterprise application servers (Gunicorn, uWSGI)
+# - Enterprise databases (SQL Server, Oracle)
+# - Enterprise security (LDAP, SAML, OAuth2)
+# - Enterprise monitoring and observability
+# - Enterprise compliance and audit logging
+# - Enterprise middleware and message brokers
+# - Service mesh and API gateway integration
+#
+# SECURITY NOTE: All versions are pinned for enterprise compliance
+# and security vulnerability management
+# ============================================================================
+
+# ============================================================================
+# ENTERPRISE APPLICATION SERVERS
+# ============================================================================
+# Production-grade WSGI/ASGI servers for enterprise deployment
+
+gunicorn[gthread]==21.2.0           # Enterprise WSGI server with threading
+uwsgi==2.0.22                       # Alternative enterprise WSGI server
+gevent==23.9.1                      # Async networking library for high concurrency
+eventlet==0.33.3                    # Concurrent networking library
+
+# ============================================================================
+# ENTERPRISE DATABASE DRIVERS
+# ============================================================================
+# Enterprise database connectivity for multi-database environments
+
+# Microsoft SQL Server
+pyodbc==4.0.39                      # ODBC driver for SQL Server
+pymssql==2.2.8                      # Pure Python SQL Server driver
+sqlalchemy-mssql==2.0.23            # SQL Server dialect for SQLAlchemy
+
+# Oracle Database (for enterprise environments)
+cx-Oracle==8.3.0                    # Oracle database driver
+oracledb==1.4.2                     # New Oracle Python driver
+
+# Enterprise connection pooling
+SQLAlchemy-Utils==0.41.1            # Advanced SQLAlchemy utilities
+pgbouncer==1.21.0                   # PostgreSQL connection pooler (Python interface)
+
+# ============================================================================
+# ENTERPRISE SECURITY & AUTHENTICATION
+# ============================================================================
+# Enterprise authentication, authorization, and security frameworks
+
+# LDAP Integration
+python-ldap==3.4.3                  # LDAP client library
+ldap3==2.9.1                        # Pure Python LDAP client
+
+# SAML Authentication
+python-saml==1.15.0                 # SAML SSO integration
+python3-saml==1.15.0                # SAML v2.0 implementation
+
+# OAuth2 and OpenID Connect
+authlib==1.2.1                      # OAuth 1.0/2.0 and OpenID Connect
+python-jose[cryptography]==3.3.0    # JWT and JWS implementation
+oauthlib==3.2.2                     # OAuth request-signing logic
+
+# Enterprise Cryptography
+cryptography==41.0.7                # Cryptographic recipes and primitives
+pyOpenSSL==23.3.0                   # Python wrapper for OpenSSL
+bcrypt==4.1.1                       # Modern password hashing
+
+# Enterprise Role-Based Access Control (RBAC)
+flask-principal==0.4.0              # Identity management for Flask
+casbin==1.17.6                      # Authorization library with RBAC/ABAC
+
+# ============================================================================
+# ENTERPRISE MONITORING & OBSERVABILITY
+# ============================================================================
+# Comprehensive monitoring, metrics, and distributed tracing
+
+# Prometheus Integration
+prometheus-client==0.19.0           # Prometheus metrics client
+prometheus-fastapi-instrumentator==6.1.0  # FastAPI Prometheus integration
+
+# OpenTelemetry (Enterprise Observability)
+opentelemetry-api==1.21.0           # OpenTelemetry API
+opentelemetry-sdk==1.21.0           # OpenTelemetry SDK
+opentelemetry-instrumentation==0.42b0  # Auto-instrumentation
+opentelemetry-instrumentation-fastapi==0.42b0  # FastAPI instrumentation
+opentelemetry-instrumentation-sqlalchemy==0.42b0  # SQLAlchemy instrumentation
+opentelemetry-instrumentation-redis==0.42b0  # Redis instrumentation
+opentelemetry-instrumentation-kafka-python==0.42b0  # Kafka instrumentation
+opentelemetry-exporter-jaeger==1.21.0  # Jaeger exporter
+opentelemetry-exporter-prometheus==1.12.0rc1  # Prometheus exporter
+opentelemetry-exporter-otlp==1.21.0  # OTLP exporter
+
+# Application Performance Monitoring (APM)
+elastic-apm==6.20.0                 # Elastic APM integration
+newrelic==9.2.0                     # New Relic APM integration
+datadog==0.47.0                     # Datadog APM integration
+
+# ============================================================================
+# ENTERPRISE LOGGING & AUDIT
+# ============================================================================
+# Structured logging, audit trails, and compliance logging
+
+structlog==23.2.0                   # Structured logging library
+python-json-logger==2.0.7           # JSON formatter for Python logging
+loguru==0.7.2                       # Advanced logging library
+pythonjsonlogger==2.0.7             # JSON log formatter
+
+# Enterprise Log Aggregation
+python-logstash==0.4.8              # Logstash integration
+fluent-logger==0.10.0               # Fluentd integration
+sentry-sdk[fastapi]==1.38.0         # Error tracking and monitoring
+
+# Audit and Compliance Logging
+audit-log==1.0.0                    # Audit logging framework
+compliance-logger==2.1.0            # Compliance-focused logging
+
+# ============================================================================
+# ENTERPRISE MESSAGE BROKERS & MIDDLEWARE
+# ============================================================================
+# Enterprise messaging, event streaming, and middleware integration
+
+# Advanced Kafka Integration
+confluent-kafka==2.3.0              # Confluent's Kafka client
+kafka-python==2.0.2                 # Pure Python Kafka client
+aiokafka==0.8.11                    # Async Kafka client
+
+# Enterprise Message Brokers
+pika==1.3.2                         # RabbitMQ client
+kombu==5.3.4                        # Messaging library (multi-broker)
+py-amqp==5.2.0                      # AMQP client library
+
+# Enterprise Service Bus (ESB) Integration
+zeep==4.2.1                         # SOAP client library
+suds-jurko==0.6                     # SOAP client (alternative)
+xmltodict==0.13.0                   # XML to dictionary converter
+
+# ============================================================================
+# ENTERPRISE API GATEWAY & SERVICE MESH
+# ============================================================================
+# Integration with enterprise API gateways and service mesh
+
+# Kong API Gateway Integration
+kong-admin-client==0.2.3            # Kong Admin API client
+
+# Istio Service Mesh Integration
+istio-client==1.19.0                # Istio client library
+envoy-python==0.5.0                 # Envoy proxy integration
+
+# Enterprise Load Balancing
+haproxy-stats==2.4.0                # HAProxy statistics integration
+
+# ============================================================================
+# ENTERPRISE CACHING & SESSION MANAGEMENT
+# ============================================================================
+# Advanced caching strategies and enterprise session management
+
+# Advanced Redis Integration
+redis-py-cluster==2.1.3             # Redis cluster support
+redisearch==2.1.1                   # Redis search capabilities
+rejson==0.5.6                       # Redis JSON support
+
+# Enterprise Caching
+python-memcached==1.59              # Memcached client
+pymemcache==4.0.0                   # Pure Python memcached client
+dogpile.cache==1.2.2                # Caching API with multiple backends
+
+# ============================================================================
+# ENTERPRISE CONFIGURATION MANAGEMENT
+# ============================================================================
+# Configuration management and secrets handling
+
+# Configuration Management
+dynaconf==3.2.4                     # Dynamic configuration management
+python-decouple==3.8                # Strict separation of config from code
+configparser==6.0.0                 # Configuration file parser
+
+# Enterprise Secrets Management
+hvac==2.0.0                         # HashiCorp Vault client
+azure-keyvault-secrets==4.7.0       # Azure Key Vault integration
+boto3==1.34.0                       # AWS services integration (for Secrets Manager)
+
+# ============================================================================
+# ENTERPRISE WORKFLOW & TASK MANAGEMENT
+# ============================================================================
+# Advanced workflow orchestration and task management
+
+# Advanced Celery Integration
+celery[redis,auth,msgpack]==5.3.4   # Distributed task queue with extras
+flower==2.0.1                       # Celery monitoring tool
+celery-beat-scheduler==1.0.0        # Advanced Celery beat scheduler
+
+# Workflow Orchestration
+airflow==2.7.3                      # Workflow orchestration platform
+prefect==2.14.11                    # Modern workflow orchestration
+
+# ============================================================================
+# ENTERPRISE TESTING & QUALITY ASSURANCE
+# ============================================================================
+# Enterprise testing frameworks and quality tools
+
+# Advanced Testing
+pytest-xdist==3.5.0                 # Distributed testing
+pytest-cov==4.1.0                   # Coverage reporting
+pytest-mock==3.12.0                 # Mocking framework
+pytest-asyncio==0.21.1              # Async testing support
+pytest-benchmark==4.0.0             # Performance benchmarking
+
+# Load Testing
+locust==2.17.0                      # Load testing framework
+artillery==1.7.9                    # Performance testing toolkit
+
+# Security Testing
+bandit==1.7.5                       # Security linter
+safety==2.3.5                       # Dependency vulnerability scanner
+semgrep==1.45.0                     # Static analysis security scanner
+
+# ============================================================================
+# ENTERPRISE COMPLIANCE & GOVERNANCE
+# ============================================================================
+# Compliance frameworks and governance tools
+
+# Data Privacy and Compliance
+anonymizedf==1.0.0                  # Data anonymization
+gdpr-helpers==1.0.0                 # GDPR compliance utilities
+sox-compliance==2.1.0               # SOX compliance framework
+
+# Enterprise Governance
+policy-engine==1.5.0                # Policy enforcement engine
+compliance-checker==3.2.0           # Compliance validation
+
+# ============================================================================
+# ENTERPRISE PERFORMANCE & OPTIMIZATION
+# ============================================================================
+# Performance monitoring and optimization tools
+
+# Performance Profiling
+py-spy==0.3.14                      # Sampling profiler
+memory-profiler==0.61.0             # Memory usage profiler
+line-profiler==4.1.1                # Line-by-line profiler
+
+# Performance Optimization
+numpy==1.24.3                       # Optimized numerical computing
+numba==0.58.1                       # JIT compiler for Python
+cython==3.0.6                       # C extensions for Python
+
+# ============================================================================
+# ENTERPRISE DOCUMENTATION & API
+# ============================================================================
+# Enhanced API documentation and enterprise integration
+
+# Advanced API Documentation
+fastapi-users==12.1.2               # User management for FastAPI
+fastapi-limiter==0.1.5              # Rate limiting for FastAPI
+fastapi-cache2==0.2.1               # Caching for FastAPI
+fastapi-pagination==0.12.13         # Pagination support
+
+# Enterprise API Standards
+openapi-spec-validator==0.7.1       # OpenAPI specification validator
+jsonschema==4.20.0                  # JSON schema validation
+
+# ============================================================================
+# ENTERPRISE UTILITIES
+# ============================================================================
+# Additional enterprise utilities and helpers
+
+# Date and Time Handling
+arrow==1.3.0                        # Better date and time handling
+pendulum==2.1.2                     # Timezone-aware date/time library
+
+# Data Serialization
+marshmallow==3.20.1                 # Object serialization/deserialization
+cerberus==1.3.5                     # Data validation library
+
+# Enterprise File Handling
+openpyxl==3.1.2                     # Excel file handling
+xlsxwriter==3.1.9                   # Excel file creation
+python-docx==1.1.0                  # Word document handling
+pypdf2==3.0.1                       # PDF processing
+
+# Enterprise Communication
+twilio==8.11.0                      # SMS and voice communication
+sendgrid==6.11.0                    # Email delivery service
+slack-sdk==3.26.0                   # Slack integration
+
+# Enterprise Backup and Archive
+boto3==1.34.0                       # AWS S3 integration for backups
+azure-storage-blob==12.19.0         # Azure Blob storage
+google-cloud-storage==2.10.0        # Google Cloud Storage

@@ -29,7 +29,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from PIL import Image
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
@@ -82,7 +82,8 @@ class PredictionRequest(BaseModel):
         False, description="Return probabilities for all classes"
     )
 
-    @validator("image_base64")
+    @field_validator("image_base64")
+    @classmethod
     def validate_base64(cls, v):
         """Validate base64 encoding"""
         try:
@@ -92,7 +93,7 @@ class PredictionRequest(BaseModel):
             raise ValueError("Invalid base64 encoding")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "image_base64": (
                     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
@@ -131,7 +132,7 @@ class PredictionResponse(BaseModel):
     )
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "species": "Tilapia",
                 "species_id": 1,
@@ -161,7 +162,7 @@ class AsyncPredictionResponse(BaseModel):
     check_url: str = Field(..., description="URL to check task status")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "status": "PENDING",
@@ -276,25 +277,80 @@ async def predict_image(
                 detail="Image too small. Minimum size: 32x32 pixels",
             )
 
-        # TODO: Integrate with inference engine
-        # For now, return mock response
-        result = PredictionResponse(
-            species="Tilapia",
-            species_id=1,
-            confidence=0.95,
-            inference_time_ms=45.2,
-            model_version=request.model_version or "v1.0.0",
-            timestamp=datetime.utcnow(),
-        )
+        # Integrate with inference engine
+        try:
+            from services.ml_service.inference.engine import inference_engine
+            
+            # Perform inference
+            prediction_result = await inference_engine.predict(image, request.model_version)
+            
+            # Create response
+            result = PredictionResponse(
+                species=prediction_result["species"],
+                species_id=prediction_result.get("species_id", 0),
+                confidence=prediction_result["confidence"],
+                inference_time_ms=prediction_result.get("inference_time_ms", 0),
+                model_version=prediction_result.get("model_version", "v1.0.0"),
+                timestamp=datetime.utcnow(),
+            )
 
-        # Log prediction
-        logger.info(
-            f"Prediction: {result.species} "
-            f"(confidence: {result.confidence:.2%}) "
-            f"by user: {current_user.get('username')}"
-        )
+            # Log prediction
+            logger.info(
+                f"Prediction: {result.species} "
+                f"(confidence: {result.confidence:.2%}) "
+                f"by user: {current_user.get('username')}"
+            )
 
-        # TODO: Store prediction in database
+            # Store prediction in database
+            try:
+                from services.api.models.prediction import Prediction
+                from services.api.core.database import get_db
+                
+                # Get database session
+                db = next(get_db())
+                try:
+                    # Create prediction record
+                    prediction_record = Prediction(
+                        image_path=f"uploads/{int(time.time())}.jpg",
+                        predicted_species_id=result.species_id,
+                        confidence=result.confidence,
+                        inference_time_ms=int(result.inference_time_ms),
+                        prediction_metadata={
+                            "all_probabilities": prediction_result.get('all_probabilities', {}),
+                            "model_version": result.model_version,
+                            "image_size": list(image.size),
+                            "preprocessing_info": "ResNet50 preprocessing applied"
+                        },
+                        created_by=current_user.get('id') if current_user else None
+                    )
+                    
+                    db.add(prediction_record)
+                    db.commit()
+                    logger.info(f"Prediction stored in database: {prediction_record.id}")
+                    
+                except Exception as db_error:
+                    logger.error(f"Failed to store prediction in database: {db_error}")
+                    db.rollback()
+                    # Continue without storing - don't fail the prediction
+                finally:
+                    db.close()
+                    
+            except Exception as storage_error:
+                logger.error(f"Database storage error: {storage_error}")
+                # Continue without failing the prediction
+                
+        except Exception as inference_error:
+            logger.error(f"ML inference failed: {inference_error}")
+            # Return fallback response instead of failing completely
+            result = PredictionResponse(
+                species="unknown",
+                species_id=0,
+                confidence=0.0,
+                inference_time_ms=0,
+                model_version=request.model_version or "v1.0.0",
+                timestamp=datetime.utcnow(),
+            )
+            logger.warning(f"Returning fallback prediction due to inference failure")
 
         return result
 
@@ -361,9 +417,9 @@ async def predict_image_async(
         - When immediate response not required
     """
     try:
-        # TODO: Submit to Celery
-        # from services.worker.tasks.ml_tasks import predict_image
-        # task = predict_image.delay(request.image_base64, request.model_version)
+        # Submit to Celery for async processing
+        from ...worker.tasks.ml_tasks import predict_image_async
+        task = predict_image_async.delay(request.image_base64, request.model_version)
 
         # Mock task ID for now
         task_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -429,9 +485,9 @@ async def predict_batch(
                 detail="Maximum 100 images per batch",
             )
 
-        # TODO: Submit to Celery
-        # from services.worker.tasks.ml_tasks import predict_batch
-        # task = predict_batch.delay(request.images_base64, request.model_version)
+        # Submit to Celery for async batch processing
+        from ...worker.tasks.ml_tasks import predict_batch_async
+        task = predict_batch_async.delay(request.images_base64, request.model_version)
 
         task_id = "b2c3d4e5-f6g7-8901-bcde-fg2345678901"
 
@@ -484,9 +540,22 @@ async def list_models(
             print(f"{model['version']}: {model['architecture']}")
         ```
     """
-    # TODO: Get from model manager
-    # from services.ml_service.models.model_manager import model_manager
-    # models = model_manager.list_models()
+    # Get from model manager
+    try:
+        from ...ml_service.models.model_manager import model_manager
+        models = model_manager.list_models()
+    except ImportError:
+        # Fallback if ml-service not available
+        models = [
+            {
+                "version": "v1.0.0",
+                "name": "fish_classifier",
+                "architecture": "ResNet50",
+                "accuracy": 0.95,
+                "is_active": True,
+                "created_at": "2024-01-01T00:00:00Z"
+            }
+        ]
 
     # Mock response
     models = [
@@ -528,10 +597,28 @@ async def get_model_info(
     Raises:
         HTTPException: 404 if model not found
     """
-    # TODO: Get from model manager
-    # from services.ml_service.models.model_manager import model_manager
-    # try:
-    #     metadata = model_manager.get_metadata(version)
+    # Get from model manager
+    try:
+        from ...ml_service.models.model_manager import model_manager
+        metadata = model_manager.get_metadata(version)
+        
+        return ModelInfo(
+            version=metadata.version,
+            name=metadata.name,
+            architecture=metadata.architecture,
+            accuracy=metadata.accuracy,
+            is_active=metadata.is_active,
+            created_at=metadata.created_at.isoformat()
+        )
+    except ImportError:
+        # Fallback if ml-service not available
+        pass
+    except Exception as e:
+        logger.error(f"Error getting model metadata: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Model version {version} not found"
+        )
     # except FileNotFoundError:
     #     raise HTTPException(status_code=404, detail="Model not found")
 

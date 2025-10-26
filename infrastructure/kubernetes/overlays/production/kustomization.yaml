@@ -1,0 +1,270 @@
+# ============================================================================
+# Production Environment Kustomization
+# ============================================================================
+#
+# This kustomization.yaml file defines the production environment configuration
+# for the Aquaculture ML Platform. It extends the base configuration with
+# production-grade settings, enhanced security, high availability, and
+# performance optimizations.
+#
+# PRODUCTION CHARACTERISTICS:
+# - High availability with multiple replicas
+# - Enhanced resource limits for performance
+# - Production-grade security configurations
+# - Monitoring and alerting integration
+# - Backup and disaster recovery support
+# - Performance-optimized database settings
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: aquaculture-platform-production
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Reference to base configuration
+resources:
+- ../../base
+
+# Production namespace
+namespace: aquaculture-production
+
+# Production-specific name prefix
+namePrefix: prod-
+
+# Common labels for production environment
+commonLabels:
+  environment: production
+  app.kubernetes.io/instance: production
+
+# Common annotations for production
+commonAnnotations:
+  platform.aquaculture.com/environment: "production"
+  platform.aquaculture.com/purpose: "live-service"
+  platform.aquaculture.com/cost-center: "operations"
+  platform.aquaculture.com/backup-policy: "daily"
+  platform.aquaculture.com/monitoring: "critical"
+
+# Production image tags (stable, tested versions)
+images:
+- name: aquaculture/api
+  newTag: "1.0.0"
+- name: aquaculture/ml-service
+  newTag: "1.0.0"
+- name: aquaculture/worker
+  newTag: "1.0.0"
+
+# Production replica counts (high availability)
+replicas:
+- name: api-service
+  count: 3
+- name: ml-service
+  count: 2
+- name: worker-service
+  count: 3
+
+# Configuration maps for production environment
+configMapGenerator:
+- name: api-config
+  literals:
+  - ENVIRONMENT=production
+  - LOG_LEVEL=INFO
+  - DATABASE_POOL_SIZE=20
+  - DATABASE_MAX_OVERFLOW=30
+  - REDIS_MAX_CONNECTIONS=50
+  - ML_SERVICE_URL=http://prod-ml-service:8001
+  - WORKER_CONCURRENCY=4
+  - ENABLE_CORS=false
+  - DEBUG_MODE=false
+  - RATE_LIMIT_ENABLED=true
+  - SECURITY_HEADERS_ENABLED=true
+
+- name: ml-config
+  literals:
+  - ENVIRONMENT=production
+  - LOG_LEVEL=INFO
+  - MODEL_CACHE_SIZE=5
+  - BATCH_SIZE=32
+  - MAX_WORKERS=4
+  - ENABLE_MODEL_VERSIONING=true
+  - MODEL_UPDATE_INTERVAL=7200
+  - PERFORMANCE_MONITORING=true
+  - MODEL_VALIDATION_STRICT=true
+
+- name: worker-config
+  literals:
+  - ENVIRONMENT=production
+  - LOG_LEVEL=INFO
+  - CELERY_BROKER_URL=redis://prod-redis:6379/0
+  - CELERY_RESULT_BACKEND=redis://prod-redis:6379/0
+  - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  - WORKER_PREFETCH_MULTIPLIER=4
+  - TASK_SOFT_TIME_LIMIT=1800
+  - TASK_TIME_LIMIT=3600
+  - TASK_RETRY_DELAY=60
+  - MAX_RETRIES=3
+
+- name: database-config
+  literals:
+  - POSTGRES_DB=aquaculture_production
+  - POSTGRES_MAX_CONNECTIONS=200
+  - POSTGRES_SHARED_BUFFERS=512MB
+  - POSTGRES_EFFECTIVE_CACHE_SIZE=2GB
+  - POSTGRES_WORK_MEM=8MB
+  - POSTGRES_MAINTENANCE_WORK_MEM=256MB
+
+- name: postgresql-config
+  files:
+  - postgresql.conf
+
+- name: redis-config
+  files:
+  - redis.conf
+
+# Secret generators (use external secret management in production)
+secretGenerator:
+- name: api-secrets
+  literals:
+  - jwt-secret=${JWT_SECRET}
+  - database-url=${API_DATABASE_URL}
+
+- name: ml-secrets
+  literals:
+  - model-signing-key=${MODEL_SIGNING_KEY}
+  - database-url=${ML_DATABASE_URL}
+
+- name: worker-secrets
+  literals:
+  - database-url=${WORKER_DATABASE_URL}
+
+- name: database-secrets
+  literals:
+  - postgres-user=${POSTGRES_USER}
+  - postgres-password=${POSTGRES_PASSWORD}
+  - postgres-exporter-dsn=${POSTGRES_EXPORTER_DSN}
+
+- name: redis-secrets
+  literals:  
+  - redis-password=${REDIS_PASSWORD}
+
+# Patches to modify base resources for production
+patches:
+# Increase resource limits for production
+- target:
+    kind: Deployment
+    name: api-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "512Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "2Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "500m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "1000m"
+
+- target:
+    kind: Deployment
+    name: ml-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "2Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "4Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "1000m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "2000m"
+
+- target:
+    kind: Deployment
+    name: worker-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "1Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "2Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "500m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "1000m"
+
+# Increase storage for production database
+- target:
+    kind: StatefulSet
+    name: postgresql
+  patch: |-
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+      value: "100Gi"
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/storageClassName
+      value: "ssd"
+
+# Increase storage for production Redis
+- target:
+    kind: StatefulSet
+    name: redis
+  patch: |-
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+      value: "20Gi"
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/storageClassName
+      value: "ssd"
+
+# Add pod disruption budgets for high availability
+- target:
+    kind: Deployment
+    name: api-service
+  patch: |-
+    - op: add
+      path: /spec/template/spec/affinity
+      value:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - api-service
+              topologyKey: kubernetes.io/hostname
+
+# Add production-specific environment variables
+- target:
+    kind: Deployment
+    name: api-service
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: SENTRY_DSN
+        valueFrom:
+          secretKeyRef:
+            name: monitoring-secrets
+            key: sentry-dsn
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+        name: NEW_RELIC_LICENSE_KEY
+        valueFrom:
+          secretKeyRef:
+            name: monitoring-secrets  
+            key: newrelic-license-key

@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ============================================================================
+ENTERPRISE AQUACULTURE API SOAP SERVICE WSDL
+============================================================================
+
+This WSDL defines the enterprise SOAP interface for the Aquaculture ML Platform API.
+It provides enterprise-grade SOAP services for:
+- Fish species classification and prediction
+- User authentication and authorization
+- Data management and reporting
+- Enterprise integration and ESB connectivity
+
+ENTERPRISE FEATURES:
+- WS-Security for enterprise authentication
+- Enterprise data types and validation
+- Comprehensive fault handling
+- Enterprise audit and compliance integration
+- Multi-environment service binding
+============================================================================ -->
+
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+             xmlns:tns="http://enterprise.local/aquaculture/api"
+             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+             xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+             targetNamespace="http://enterprise.local/aquaculture/api"
+             elementFormDefault="qualified">
+
+  <!-- Enterprise Documentation -->
+  <documentation>
+    Enterprise Aquaculture ML Platform SOAP API
+    Version: 1.0.0
+    Environment: Production
+    Compliance: SOX, GDPR, PCI
+    Security: WS-Security, Enterprise Authentication
+    Support: api-support@enterprise.local
+  </documentation>
+
+  <!-- Enterprise Data Types -->
+  <types>
+    <xsd:schema targetNamespace="http://enterprise.local/aquaculture/api"
+                elementFormDefault="qualified">
+      
+      <!-- Enterprise Authentication Types -->
+      <xsd:complexType name="EnterpriseCredentials">
+        <xsd:sequence>
+          <xsd:element name="username" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="password" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="token" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="enterpriseId" type="xsd:string" minOccurs="1"/>
+          <xsd:element name="department" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="role" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="AuthenticationResponse">
+        <xsd:sequence>
+          <xsd:element name="success" type="xsd:boolean"/>
+          <xsd:element name="token" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="expiresAt" type="xsd:dateTime" minOccurs="0"/>
+          <xsd:element name="permissions" type="xsd:string" maxOccurs="unbounded" minOccurs="0"/>
+          <xsd:element name="enterpriseMetadata" type="tns:EnterpriseMetadata" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Enterprise Fish Classification Types -->
+      <xsd:complexType name="FishImage">
+        <xsd:sequence>
+          <xsd:element name="imageData" type="xsd:base64Binary"/>
+          <xsd:element name="imageFormat" type="xsd:string"/>
+          <xsd:element name="imageSize" type="xsd:int"/>
+          <xsd:element name="metadata" type="tns:ImageMetadata" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ImageMetadata">
+        <xsd:sequence>
+          <xsd:element name="captureDate" type="xsd:dateTime" minOccurs="0"/>
+          <xsd:element name="location" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="cameraId" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="waterTemperature" type="xsd:decimal" minOccurs="0"/>
+          <xsd:element name="depth" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="FishPrediction">
+        <xsd:sequence>
+          <xsd:element name="species" type="xsd:string"/>
+          <xsd:element name="confidence" type="xsd:decimal"/>
+          <xsd:element name="alternativeSpecies" type="tns:SpeciesPrediction" maxOccurs="unbounded" minOccurs="0"/>
+          <xsd:element name="healthStatus" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="size" type="tns:FishSize" minOccurs="0"/>
+          <xsd:element name="enterpriseMetadata" type="tns:EnterpriseMetadata"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="SpeciesPrediction">
+        <xsd:sequence>
+          <xsd:element name="species" type="xsd:string"/>
+          <xsd:element name="confidence" type="xsd:decimal"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="FishSize">
+        <xsd:sequence>
+          <xsd:element name="length" type="xsd:decimal"/>
+          <xsd:element name="weight" type="xsd:decimal" minOccurs="0"/>
+          <xsd:element name="unit" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Enterprise Metadata Types -->
+      <xsd:complexType name="EnterpriseMetadata">
+        <xsd:sequence>
+          <xsd:element name="requestId" type="xsd:string"/>
+          <xsd:element name="timestamp" type="xsd:dateTime"/>
+          <xsd:element name="userId" type="xsd:string"/>
+          <xsd:element name="enterpriseId" type="xsd:string"/>
+          <xsd:element name="complianceFlags" type="xsd:string" maxOccurs="unbounded" minOccurs="0"/>
+          <xsd:element name="auditTrail" type="xsd:string"/>
+          <xsd:element name="processingTime" type="xsd:decimal" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Enterprise Batch Processing Types -->
+      <xsd:complexType name="BatchPredictionRequest">
+        <xsd:sequence>
+          <xsd:element name="images" type="tns:FishImage" maxOccurs="unbounded"/>
+          <xsd:element name="batchId" type="xsd:string"/>
+          <xsd:element name="priority" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="callbackUrl" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="BatchPredictionResponse">
+        <xsd:sequence>
+          <xsd:element name="batchId" type="xsd:string"/>
+          <xsd:element name="status" type="xsd:string"/>
+          <xsd:element name="predictions" type="tns:FishPrediction" maxOccurs="unbounded" minOccurs="0"/>
+          <xsd:element name="processingTime" type="xsd:decimal"/>
+          <xsd:element name="enterpriseMetadata" type="tns:EnterpriseMetadata"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Enterprise Fault Types -->
+      <xsd:complexType name="EnterpriseFault">
+        <xsd:sequence>
+          <xsd:element name="faultCode" type="xsd:string"/>
+          <xsd:element name="faultMessage" type="xsd:string"/>
+          <xsd:element name="faultDetail" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="timestamp" type="xsd:dateTime"/>
+          <xsd:element name="requestId" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="supportReference" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Enterprise Request/Response Elements -->
+      <xsd:element name="AuthenticateRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="credentials" type="tns:EnterpriseCredentials"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="AuthenticateResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="authResult" type="tns:AuthenticationResponse"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="PredictFishSpeciesRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="image" type="tns:FishImage"/>
+            <xsd:element name="options" type="xsd:string" maxOccurs="unbounded" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="PredictFishSpeciesResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="prediction" type="tns:FishPrediction"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="BatchPredictRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="batchRequest" type="tns:BatchPredictionRequest"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="BatchPredictResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="batchResponse" type="tns:BatchPredictionResponse"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="EnterpriseFaultDetail" type="tns:EnterpriseFault"/>
+
+    </xsd:schema>
+  </types>
+
+  <!-- Enterprise Messages -->
+  <message name="AuthenticateRequestMessage">
+    <part name="parameters" element="tns:AuthenticateRequest"/>
+  </message>
+
+  <message name="AuthenticateResponseMessage">
+    <part name="parameters" element="tns:AuthenticateResponse"/>
+  </message>
+
+  <message name="PredictFishSpeciesRequestMessage">
+    <part name="parameters" element="tns:PredictFishSpeciesRequest"/>
+  </message>
+
+  <message name="PredictFishSpeciesResponseMessage">
+    <part name="parameters" element="tns:PredictFishSpeciesResponse"/>
+  </message>
+
+  <message name="BatchPredictRequestMessage">
+    <part name="parameters" element="tns:BatchPredictRequest"/>
+  </message>
+
+  <message name="BatchPredictResponseMessage">
+    <part name="parameters" element="tns:BatchPredictResponse"/>
+  </message>
+
+  <message name="EnterpriseFaultMessage">
+    <part name="fault" element="tns:EnterpriseFaultDetail"/>
+  </message>
+
+  <!-- Enterprise Port Type -->
+  <portType name="AquacultureEnterpriseAPI">
+    
+    <documentation>
+      Enterprise Aquaculture API Port Type
+      Provides enterprise-grade SOAP operations for fish classification and management
+    </documentation>
+
+    <operation name="Authenticate">
+      <documentation>
+        Enterprise authentication operation
+        Authenticates users against enterprise LDAP/AD systems
+      </documentation>
+      <input message="tns:AuthenticateRequestMessage"/>
+      <output message="tns:AuthenticateResponseMessage"/>
+      <fault name="AuthenticationFault" message="tns:EnterpriseFaultMessage"/>
+    </operation>
+
+    <operation name="PredictFishSpecies">
+      <documentation>
+        Enterprise fish species prediction operation
+        Classifies fish species using enterprise ML models
+      </documentation>
+      <input message="tns:PredictFishSpeciesRequestMessage"/>
+      <output message="tns:PredictFishSpeciesResponseMessage"/>
+      <fault name="PredictionFault" message="tns:EnterpriseFaultMessage"/>
+    </operation>
+
+    <operation name="BatchPredict">
+      <documentation>
+        Enterprise batch prediction operation
+        Processes multiple fish images in a single enterprise batch
+      </documentation>
+      <input message="tns:BatchPredictRequestMessage"/>
+      <output message="tns:BatchPredictResponseMessage"/>
+      <fault name="BatchProcessingFault" message="tns:EnterpriseFaultMessage"/>
+    </operation>
+
+  </portType>
+
+  <!-- Enterprise Binding -->
+  <binding name="AquacultureEnterpriseAPIBinding" type="tns:AquacultureEnterpriseAPI">
+    
+    <documentation>
+      Enterprise SOAP 1.2 Binding with WS-Security
+      Includes enterprise security, compliance, and audit features
+    </documentation>
+
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <operation name="Authenticate">
+      <soap:operation soapAction="http://enterprise.local/aquaculture/api/Authenticate"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:EnterpriseSecurityHeader" part="Security" use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+      <fault name="AuthenticationFault">
+        <soap:fault name="AuthenticationFault" use="literal"/>
+      </fault>
+    </operation>
+
+    <operation name="PredictFishSpecies">
+      <soap:operation soapAction="http://enterprise.local/aquaculture/api/PredictFishSpecies"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:EnterpriseSecurityHeader" part="Security" use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+      <fault name="PredictionFault">
+        <soap:fault name="PredictionFault" use="literal"/>
+      </fault>
+    </operation>
+
+    <operation name="BatchPredict">
+      <soap:operation soapAction="http://enterprise.local/aquaculture/api/BatchPredict"/>
+      <input>
+        <soap:body use="literal"/>
+        <soap:header message="tns:EnterpriseSecurityHeader" part="Security" use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+      <fault name="BatchProcessingFault">
+        <soap:fault name="BatchProcessingFault" use="literal"/>
+      </fault>
+    </operation>
+
+  </binding>
+
+  <!-- Enterprise Security Header -->
+  <message name="EnterpriseSecurityHeader">
+    <part name="Security" element="wsse:Security"/>
+  </message>
+
+  <!-- Enterprise Service Endpoints -->
+  <service name="AquacultureEnterpriseService">
+    
+    <documentation>
+      Enterprise Aquaculture SOAP Service
+      Production endpoint with enterprise security and compliance
+    </documentation>
+
+    <port name="AquacultureEnterpriseHTTP" binding="tns:AquacultureEnterpriseAPIBinding">
+      <soap:address location="http://soap.aquaculture.enterprise.local/soap/aquaculture/api/"/>
+    </port>
+
+    <port name="AquacultureEnterpriseHTTPS" binding="tns:AquacultureEnterpriseAPIBinding">
+      <soap:address location="https://soap.aquaculture.enterprise.local/soap/aquaculture/api/"/>
+    </port>
+
+  </service>
+
+  <!-- Enterprise Staging Service -->
+  <service name="AquacultureEnterpriseStagingService">
+    
+    <documentation>
+      Enterprise Aquaculture SOAP Service - Staging Environment
+      Staging endpoint for enterprise testing and validation
+    </documentation>
+
+    <port name="AquacultureEnterpriseStagingHTTP" binding="tns:AquacultureEnterpriseAPIBinding">
+      <soap:address location="http://soap-staging.aquaculture.enterprise.local/soap/aquaculture/api/"/>
+    </port>
+
+    <port name="AquacultureEnterpriseStagingHTTPS" binding="tns:AquacultureEnterpriseAPIBinding">
+      <soap:address location="https://soap-staging.aquaculture.enterprise.local/soap/aquaculture/api/"/>
+    </port>
+
+  </service>
+
+</definitions>

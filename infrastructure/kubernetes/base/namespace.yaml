@@ -1,0 +1,27 @@
+# ============================================================================
+# Base Namespace Configuration
+# ============================================================================
+#
+# This file defines the base namespace configuration that will be customized
+# for different environments (staging, production) using Kustomize overlays.
+#
+# FEATURES:
+# - Common labels and annotations
+# - Network policies preparation
+# - Resource quotas and limits (to be overlaid)
+# - Environment-agnostic configuration
+# ============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aquaculture
+  labels:
+    name: aquaculture
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/part-of: aquaculture-ml-platform
+    app.kubernetes.io/managed-by: kustomize
+  annotations:
+    description: "Aquaculture ML Platform namespace"
+    contact: "platform-team@aquaculture.com"
+    documentation: "https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform"

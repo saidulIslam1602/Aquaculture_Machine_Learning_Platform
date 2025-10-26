@@ -45,6 +45,7 @@ import { Toaster } from 'react-hot-toast';
 // Application-specific components and contexts
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Dashboard from './pages/Dashboard';
+import Login from './pages/Login';
 
 // ============================================================================
 // REACT QUERY CONFIGURATION
@@ -142,6 +143,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <BrowserRouter>
             <Routes>
+              <Route path="/login" element={<Login />} />
               <Route
                 path="/"
                 element={

@@ -1,0 +1,277 @@
+# ============================================================================
+# Comprehensive ServiceMonitor Configuration for Aquaculture ML Platform
+# ============================================================================
+#
+# This file consolidates all ServiceMonitor resources for production-grade
+# monitoring with Prometheus Operator. It includes comprehensive metrics
+# collection for all platform components with proper labeling and relabeling.
+#
+# MONITORING COVERAGE:
+# - API Service: HTTP metrics, business KPIs, performance monitoring
+# - ML Service: Model inference metrics, prediction accuracy, latency
+# - Worker Service: Task processing, queue metrics, error rates  
+# - Database: Connection pools, query performance, replication status
+# - Redis: Memory usage, command statistics, persistence metrics
+# - Infrastructure: Node metrics, resource utilization, health checks
+# ============================================================================
+
+---
+# API Service Monitor - Comprehensive HTTP and Business Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-service-monitor
+  labels:
+    app: api-service
+    component: api
+    tier: backend
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app: api-service
+      component: api
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    scheme: http
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    - sourceLabels: [__meta_kubernetes_service_name]
+      targetLabel: service_name
+    - sourceLabels: [__meta_kubernetes_pod_ip]
+      targetLabel: pod_ip
+    - sourceLabels: [__meta_kubernetes_pod_label_version]
+      targetLabel: version
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'http_request_.*|fastapi_.*|api_.*'
+      targetLabel: component
+      replacement: 'api'
+    - sourceLabels: [__name__]
+      regex: 'business_.*|kpi_.*'
+      targetLabel: metric_type
+      replacement: 'business'
+  
+  # Business metrics endpoint with longer scrape interval
+  - port: http
+    path: /business-metrics
+    interval: 60s
+    scrapeTimeout: 30s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'business_.*'
+      targetLabel: component
+      replacement: 'business'
+
+---
+# ML Service Monitor - Model Inference and Performance Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ml-service-monitor
+  labels:
+    app: ml-service
+    component: ml
+    tier: ml-service
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app: ml-service
+      component: ml
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 20s
+    scrapeTimeout: 15s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    - sourceLabels: [__meta_kubernetes_pod_label_model_version]
+      targetLabel: model_version
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'ml_.*|model_.*|prediction_.*|inference_.*'
+      targetLabel: component
+      replacement: 'ml'
+    - sourceLabels: [__name__]
+      regex: 'tensorflow_.*|torch_.*'
+      targetLabel: framework
+      replacement: 'ml_framework'
+
+---
+# Worker Service Monitor - Celery Task Processing Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: worker-service-monitor
+  labels:
+    app: worker-service
+    component: worker
+    tier: worker
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app: worker-service
+      component: worker
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'celery_.*|worker_.*|task_.*'
+      targetLabel: component
+      replacement: 'worker'
+    - sourceLabels: [__name__]
+      regex: 'queue_.*'
+      targetLabel: metric_type
+      replacement: 'queue'
+
+---
+# PostgreSQL Database Monitor - Database Performance Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgresql-monitor
+  labels:
+    app: postgresql
+    component: database
+    tier: database
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app: postgresql
+      component: database
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 15s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'pg_.*|postgres_.*'
+      targetLabel: component
+      replacement: 'database'
+    - sourceLabels: [datname]
+      regex: 'aquaculture.*'
+      targetLabel: database_type
+      replacement: 'application'
+
+---
+# Redis Cache Monitor - Redis Performance and Memory Metrics
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: redis-monitor
+  labels:
+    app: redis
+    component: cache
+    tier: cache
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app: redis
+      component: cache
+  namespaceSelector:
+    any: true
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: 'redis_.*'
+      targetLabel: component
+      replacement: 'cache'
+    - sourceLabels: [__name__]
+      regex: 'redis_memory_.*'
+      targetLabel: metric_type
+      replacement: 'memory'
+
+---
+# Comprehensive Pod Monitor - System-level Metrics for All Pods
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: aquaculture-pods-monitor
+  labels:
+    app: aquaculture-platform
+    prometheus: kube-prometheus
+    monitoring.aquaculture.com/scrape: "true"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: aquaculture-platform
+  namespaceSelector:
+    any: true
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    relabelings:
+    - sourceLabels: [__meta_kubernetes_pod_name]
+      targetLabel: pod_name
+    - sourceLabels: [__meta_kubernetes_pod_node_name]
+      targetLabel: node_name
+    - sourceLabels: [__meta_kubernetes_namespace]
+      targetLabel: kubernetes_namespace
+    - sourceLabels: [__meta_kubernetes_pod_container_name]
+      targetLabel: container_name

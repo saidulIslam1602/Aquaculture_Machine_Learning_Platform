@@ -50,8 +50,29 @@ def cleanup_expired_results(self) -> Dict[str, Any]:
         # Get all task results older than 24 hours
         cutoff_time = datetime.utcnow() - timedelta(hours=24)
 
-        # TODO: Implement actual cleanup logic with Redis
-        deleted_count = 0
+        # Implement actual cleanup logic with Redis
+        try:
+            from ...api.core.redis_client import get_redis
+            import asyncio
+            
+            async def cleanup_redis():
+                redis_client = await get_redis()
+                keys = await redis_client.keys("prediction:*")
+                deleted_count = 0
+                
+                for key in keys:
+                    # Check if key is older than cutoff time
+                    ttl = await redis_client.ttl(key)
+                    if ttl == -1 or ttl > 86400:  # No TTL or > 24 hours
+                        await redis_client.delete(key)
+                        deleted_count += 1
+                
+                return deleted_count
+            
+            deleted_count = asyncio.run(cleanup_redis())
+        except Exception as e:
+            logger.error(f"Redis cleanup failed: {e}")
+            deleted_count = 0
 
         logger.info(f"Cleanup completed: {deleted_count} results deleted")
 
@@ -96,26 +117,62 @@ def worker_health_check(self) -> Dict[str, Any]:
     }
 
     try:
-        # Check database
-        # TODO: Implement actual database check
-        health_status["checks"]["database"] = "healthy"
+        # Check database connectivity
+        try:
+            from services.api.core.database import get_db
+            db = next(get_db())
+            db.execute("SELECT 1")
+            db.close()
+            health_status["checks"]["database"] = "healthy"
+        except Exception as e:
+            health_status["checks"]["database"] = f"unhealthy: {str(e)}"
+            health_status["status"] = "unhealthy"
 
-        # Check Redis
-        # TODO: Implement actual Redis check
-        health_status["checks"]["redis"] = "healthy"
+        # Check Redis connectivity
+        try:
+            import redis
+            from services.api.core.config import settings
+            r = redis.from_url(settings.REDIS_URL)
+            r.ping()
+            health_status["checks"]["redis"] = "healthy"
+        except Exception as e:
+            health_status["checks"]["redis"] = f"unhealthy: {str(e)}"
+            health_status["status"] = "unhealthy"
 
-        # Check Kafka
-        # TODO: Implement actual Kafka check
-        health_status["checks"]["kafka"] = "healthy"
+        # Check Kafka connectivity
+        try:
+            from kafka import KafkaProducer
+            from services.api.core.config import settings
+            producer = KafkaProducer(
+                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS.split(','),
+                request_timeout_ms=5000,
+                api_version=(0, 10, 1)
+            )
+            producer.close()
+            health_status["checks"]["kafka"] = "healthy"
+        except Exception as e:
+            health_status["checks"]["kafka"] = f"unhealthy: {str(e)}"
+            health_status["status"] = "unhealthy"
 
-        # Check model availability
-        # TODO: Implement actual model check
-        health_status["checks"]["model"] = "healthy"
+        # Check ML model availability
+        try:
+            from services.ml_service.core.model_registry import model_registry
+            available_models = model_registry.list_available_models()
+            if available_models:
+                health_status["checks"]["model"] = "healthy"
+                health_status["checks"]["available_models"] = len(available_models)
+            else:
+                health_status["checks"]["model"] = "no models available"
+                health_status["status"] = "degraded"
+        except Exception as e:
+            health_status["checks"]["model"] = f"unhealthy: {str(e)}"
+            health_status["status"] = "unhealthy"
 
-        health_status["status"] = "healthy"
+        # Overall status
+        if health_status["status"] != "unhealthy":
+            health_status["status"] = "healthy"
 
-        logger.info("Health check passed")
-
+        logger.info(f"Health check completed: {health_status['status']}")
         return health_status
 
     except Exception as e:
@@ -162,12 +219,36 @@ def aggregate_predictions(self, start_date: str, end_date: str) -> Dict[str, Any
         datetime.fromisoformat(start_date)  # Parse start date
         datetime.fromisoformat(end_date)  # Parse end date
 
-        # TODO: Implement actual aggregation with database
+        # Implement actual aggregation with database
+        from sqlalchemy import create_engine, text
+        from ...api.core.config import settings
+        
+        engine = create_engine(settings.DATABASE_URL)
+        
+        with engine.connect() as conn:
+            # Get total predictions in date range
+            total_result = conn.execute(text("""
+                SELECT COUNT(*) as total 
+                FROM predictions 
+                WHERE created_at BETWEEN :start_date AND :end_date
+            """), {"start_date": start_date, "end_date": end_date})
+            total_predictions = total_result.fetchone()[0]
+            
+            # Get predictions by species
+            species_result = conn.execute(text("""
+                SELECT predicted_species, COUNT(*) as count
+                FROM predictions 
+                WHERE created_at BETWEEN :start_date AND :end_date
+                GROUP BY predicted_species
+            """), {"start_date": start_date, "end_date": end_date})
+            
+            predictions_by_species = {row[0]: row[1] for row in species_result.fetchall()}
+        
         stats = {
             "start_date": start_date,
             "end_date": end_date,
-            "total_predictions": 0,
-            "predictions_by_species": {},
+            "total_predictions": total_predictions,
+            "predictions_by_species": predictions_by_species,
             "average_confidence": 0.0,
             "predictions_by_model": {},
             "task_id": self.request.id,
@@ -217,7 +298,37 @@ def export_predictions(
         file_name = f"predictions_{timestamp}.{format}"
         file_path = f"/app/data/exports/{file_name}"
 
-        # TODO: Implement actual export logic
+        # Implement actual export logic
+        import os
+        import pandas as pd
+        from sqlalchemy import create_engine
+        from ...api.core.config import settings
+        
+        # Ensure export directory exists
+        os.makedirs("/app/data/exports", exist_ok=True)
+        
+        # Get data from database
+        engine = create_engine(settings.DATABASE_URL)
+        query = """
+            SELECT p.id, p.predicted_species, p.confidence_score, p.created_at,
+                   u.username, m.name as model_name
+            FROM predictions p
+            LEFT JOIN users u ON p.user_id = u.id
+            LEFT JOIN models m ON p.model_id = m.id
+            ORDER BY p.created_at DESC
+        """
+        
+        df = pd.read_sql(query, engine)
+        
+        # Export based on format
+        if format.lower() == 'csv':
+            df.to_csv(file_path, index=False)
+        elif format.lower() == 'json':
+            df.to_json(file_path, orient='records', date_format='iso')
+        elif format.lower() == 'excel':
+            df.to_excel(file_path, index=False)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
 
         result = {
             "file_path": file_path,
@@ -266,8 +377,27 @@ def cleanup_old_predictions(self, days_to_keep: int = 90) -> Dict[str, Any]:
     try:
         cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
 
-        # TODO: Implement actual cleanup with database
-        deleted_count = 0
+        # Implement actual cleanup with database
+        from sqlalchemy import create_engine, text
+        from ...api.core.config import settings
+        
+        engine = create_engine(settings.DATABASE_URL)
+        
+        with engine.begin() as conn:  # Use transaction for safety
+            # Delete old predictions
+            result = conn.execute(text("""
+                DELETE FROM predictions 
+                WHERE created_at < :cutoff_date
+            """), {"cutoff_date": cutoff_date})
+            
+            deleted_count = result.rowcount
+            
+            # Also cleanup related audit logs if they exist
+            conn.execute(text("""
+                DELETE FROM audit_logs 
+                WHERE created_at < :cutoff_date 
+                AND action LIKE '%prediction%'
+            """), {"cutoff_date": cutoff_date})
 
         logger.info(f"Cleaned up {deleted_count} predictions older than {cutoff_date}")
 

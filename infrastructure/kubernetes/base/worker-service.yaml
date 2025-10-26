@@ -1,0 +1,176 @@
+# ============================================================================
+# Base Worker Service Deployment
+# ============================================================================
+#
+# This file defines the base worker service deployment configuration that
+# provides distributed task processing using Celery and handles background
+# operations for the Aquaculture ML Platform.
+#
+# FEATURES:
+# - Celery distributed task processing
+# - Kafka message consumption
+# - Background ML inference tasks
+# - Auto-scaling based on queue length
+# - Redis backend integration
+# - Comprehensive error handling
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-service
+  labels:
+    app: worker-service
+    component: worker
+    tier: worker
+    app.kubernetes.io/name: worker-service
+    app.kubernetes.io/component: worker
+    app.kubernetes.io/part-of: aquaculture-platform
+spec:
+  replicas: 2  # Base replica count
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1  # Workers can tolerate some downtime
+  selector:
+    matchLabels:
+      app: worker-service
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: worker-service
+        component: worker
+        tier: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8002"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: worker-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: worker
+        image: aquaculture/worker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: metrics
+          containerPort: 8002
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: worker-config
+              key: ENVIRONMENT
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: worker-config
+              key: CELERY_BROKER_URL
+        - name: CELERY_RESULT_BACKEND
+          valueFrom:
+            configMapKeyRef:
+              name: worker-config
+              key: CELERY_RESULT_BACKEND
+        - name: KAFKA_BOOTSTRAP_SERVERS
+          valueFrom:
+            configMapKeyRef:
+              name: worker-config
+              key: KAFKA_BOOTSTRAP_SERVERS
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: worker-secrets
+              key: database-url
+        envFrom:
+        - configMapRef:
+            name: worker-config
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "celery -A worker inspect ping"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "celery -A worker inspect active"
+          initialDelaySeconds: 15
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: var-log
+          mountPath: /var/log
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: var-log
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+# Service for Worker (metrics only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker-service
+  labels:
+    app: worker-service
+    component: worker
+    tier: worker
+    app.kubernetes.io/name: worker-service
+    app.kubernetes.io/component: worker
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 8002
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app: worker-service
+    component: worker
+
+---
+# ServiceAccount for Worker Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: worker-service
+  labels:
+    app: worker-service
+    component: worker
+    app.kubernetes.io/name: worker-service
+    app.kubernetes.io/component: worker

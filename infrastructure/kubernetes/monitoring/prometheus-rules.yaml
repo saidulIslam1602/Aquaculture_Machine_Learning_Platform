@@ -1,0 +1,363 @@
+# ============================================================================
+# Comprehensive PrometheusRule for Aquaculture ML Platform
+# ============================================================================
+#
+# This file defines production-grade alerting rules for comprehensive
+# monitoring of the Aquaculture ML Platform. Rules are organized by
+# component and severity level with proper escalation paths.
+#
+# ALERT CATEGORIES:
+# - Infrastructure: Node health, resource utilization, Kubernetes health
+# - Application: Service availability, response times, error rates
+# - Business: KPI thresholds, data quality, processing delays
+# - Security: Authentication failures, suspicious activity
+# - Performance: Latency, throughput, resource efficiency
+# ============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: aquaculture-platform-alerts
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+    app: aquaculture-platform
+spec:
+  groups:
+  
+  # ========================================
+  # CRITICAL INFRASTRUCTURE ALERTS
+  # ========================================
+  - name: infrastructure.critical
+    interval: 30s
+    rules:
+    
+    - alert: NodeDown
+      expr: up{job="node-exporter"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: infrastructure
+        team: sre
+      annotations:
+        summary: "Node is down"
+        description: "Node {{ $labels.instance }} has been down for more than 1 minute"
+        runbook_url: "https://docs.aquaculture.com/runbooks/node-down"
+    
+    - alert: NodeMemoryHigh
+      expr: |
+        (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / 
+        node_memory_MemTotal_bytes > 0.9
+      for: 5m
+      labels:
+        severity: critical
+        component: infrastructure
+        team: sre
+      annotations:
+        summary: "Node memory usage critical"
+        description: "Node {{ $labels.instance }} memory usage is {{ $value | humanizePercentage }}"
+
+    - alert: NodeDiskSpaceCritical
+      expr: |
+        (node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_free_bytes{fstype!="tmpfs"}) /
+        node_filesystem_size_bytes{fstype!="tmpfs"} > 0.95
+      for: 2m
+      labels:
+        severity: critical
+        component: infrastructure
+        team: sre
+      annotations:
+        summary: "Node disk space critical"
+        description: "Node {{ $labels.instance }} disk usage is {{ $value | humanizePercentage }}"
+
+  # ========================================
+  # APPLICATION SERVICE ALERTS
+  # ========================================
+  - name: application.critical
+    interval: 30s
+    rules:
+    
+    - alert: ServiceDown
+      expr: up{job=~"api-service|ml-service|worker-service"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: application
+        team: backend
+      annotations:
+        summary: "Service is down"
+        description: "Service {{ $labels.job }} instance {{ $labels.instance }} is down"
+        runbook_url: "https://docs.aquaculture.com/runbooks/service-down"
+    
+    - alert: HighErrorRate
+      expr: |
+        rate(http_requests_total{status=~"5.."}[5m]) /
+        rate(http_requests_total[5m]) > 0.1
+      for: 3m
+      labels:
+        severity: critical
+        component: application
+        team: backend
+      annotations:
+        summary: "High error rate detected"
+        description: "Error rate for {{ $labels.job }} is {{ $value | humanizePercentage }}"
+    
+    - alert: HighResponseTime
+      expr: |
+        histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2.0
+      for: 5m
+      labels:
+        severity: warning
+        component: application
+        team: backend
+      annotations:
+        summary: "High response time"
+        description: "95th percentile response time for {{ $labels.job }} is {{ $value }}s"
+
+  # ========================================
+  # DATABASE ALERTS
+  # ========================================
+  - name: database.critical
+    interval: 60s
+    rules:
+    
+    - alert: PostgreSQLDown
+      expr: pg_up == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: database
+        team: dba
+      annotations:
+        summary: "PostgreSQL is down"
+        description: "PostgreSQL instance {{ $labels.instance }} is down"
+        runbook_url: "https://docs.aquaculture.com/runbooks/postgresql-down"
+    
+    - alert: PostgreSQLConnectionsHigh
+      expr: |
+        pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        component: database
+        team: dba
+      annotations:
+        summary: "PostgreSQL connections high"
+        description: "PostgreSQL connection usage is {{ $value | humanizePercentage }}"
+    
+    - alert: PostgreSQLSlowQueries
+      expr: |
+        rate(pg_stat_database_blk_read_time[10m]) / rate(pg_stat_database_blks_read[10m]) > 0.01
+      for: 10m
+      labels:
+        severity: warning
+        component: database
+        team: dba
+      annotations:
+        summary: "PostgreSQL slow queries detected"
+        description: "Average query time is {{ $value }}s for database {{ $labels.datname }}"
+
+  # ========================================
+  # REDIS CACHE ALERTS
+  # ========================================
+  - name: redis.critical
+    interval: 30s
+    rules:
+    
+    - alert: RedisDown
+      expr: redis_up == 0
+      for: 1m
+      labels:
+        severity: critical
+        component: cache
+        team: backend
+      annotations:
+        summary: "Redis is down"
+        description: "Redis instance {{ $labels.instance }} is down"
+        runbook_url: "https://docs.aquaculture.com/runbooks/redis-down"
+    
+    - alert: RedisMemoryHigh
+      expr: |
+        redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        component: cache
+        team: backend
+      annotations:
+        summary: "Redis memory usage high"
+        description: "Redis memory usage is {{ $value | humanizePercentage }}"
+    
+    - alert: RedisConnectionsHigh
+      expr: |
+        redis_connected_clients / redis_config_maxclients > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        component: cache
+        team: backend
+      annotations:
+        summary: "Redis connections high"
+        description: "Redis connection usage is {{ $value | humanizePercentage }}"
+
+  # ========================================
+  # ML SERVICE ALERTS
+  # ========================================
+  - name: ml-service.critical
+    interval: 60s
+    rules:
+    
+    - alert: MLModelInferenceFailureHigh
+      expr: |
+        rate(ml_inference_failures_total[10m]) /
+        rate(ml_inference_requests_total[10m]) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "ML model inference failure rate high"
+        description: "ML inference failure rate is {{ $value | humanizePercentage }}"
+    
+    - alert: MLModelLatencyHigh
+      expr: |
+        histogram_quantile(0.95, rate(ml_inference_duration_seconds_bucket[10m])) > 5.0
+      for: 5m
+      labels:
+        severity: warning
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "ML model inference latency high"
+        description: "95th percentile ML inference latency is {{ $value }}s"
+    
+    - alert: MLModelAccuracyDrop
+      expr: |
+        ml_model_accuracy < 0.85
+      for: 15m
+      labels:
+        severity: warning
+        component: ml
+        team: ml-ops
+      annotations:
+        summary: "ML model accuracy below threshold"
+        description: "Model {{ $labels.model_name }} accuracy is {{ $value | humanizePercentage }}"
+
+  # ========================================
+  # WORKER SERVICE ALERTS
+  # ========================================
+  - name: worker.critical
+    interval: 60s
+    rules:
+    
+    - alert: CeleryQueueBacklog
+      expr: |
+        celery_queue_length > 1000
+      for: 5m
+      labels:
+        severity: warning
+        component: worker
+        team: backend
+      annotations:
+        summary: "Celery queue backlog high"
+        description: "Queue {{ $labels.queue }} has {{ $value }} pending tasks"
+    
+    - alert: CeleryWorkerDown
+      expr: |
+        celery_worker_up == 0
+      for: 2m
+      labels:
+        severity: critical
+        component: worker
+        team: backend
+      annotations:
+        summary: "Celery worker is down"
+        description: "Worker {{ $labels.worker }} is not responding"
+    
+    - alert: HighTaskFailureRate
+      expr: |
+        rate(celery_task_failures_total[10m]) /
+        rate(celery_task_total[10m]) > 0.1
+      for: 5m
+      labels:
+        severity: warning
+        component: worker
+        team: backend
+      annotations:
+        summary: "High task failure rate"
+        description: "Task failure rate is {{ $value | humanizePercentage }}"
+
+  # ========================================
+  # BUSINESS METRIC ALERTS
+  # ========================================
+  - name: business.critical
+    interval: 300s
+    rules:
+    
+    - alert: DataIngestionStopped
+      expr: |
+        increase(business_data_ingestion_total[1h]) == 0
+      for: 30m
+      labels:
+        severity: critical
+        component: business
+        team: data
+      annotations:
+        summary: "Data ingestion has stopped"
+        description: "No data has been ingested in the last hour"
+    
+    - alert: PredictionAccuracyDegraded
+      expr: |
+        business_prediction_accuracy < 0.8
+      for: 1h
+      labels:
+        severity: warning
+        component: business
+        team: ml-ops
+      annotations:
+        summary: "Prediction accuracy degraded"
+        description: "Overall prediction accuracy is {{ $value | humanizePercentage }}"
+    
+    - alert: ActiveUsersDropped
+      expr: |
+        business_active_users < 100
+      for: 15m
+      labels:
+        severity: warning
+        component: business
+        team: product
+      annotations:
+        summary: "Active users count dropped"
+        description: "Active users count is {{ $value }}"
+
+  # ========================================
+  # SECURITY ALERTS
+  # ========================================
+  - name: security.critical
+    interval: 60s
+    rules:
+    
+    - alert: HighAuthenticationFailures
+      expr: |
+        rate(http_requests_total{status="401"}[5m]) > 10
+      for: 2m
+      labels:
+        severity: warning
+        component: security
+        team: security
+      annotations:
+        summary: "High authentication failure rate"
+        description: "Authentication failure rate is {{ $value }} per second"
+    
+    - alert: SuspiciousAPIActivity
+      expr: |
+        rate(http_requests_total[5m]) > 1000
+      for: 5m
+      labels:
+        severity: warning
+        component: security
+        team: security
+      annotations:
+        summary: "Suspicious API activity detected"
+        description: "Request rate is {{ $value }} per second from {{ $labels.instance }}"

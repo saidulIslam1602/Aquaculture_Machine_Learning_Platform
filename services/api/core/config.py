@@ -15,6 +15,7 @@ Industry Standards:
 from functools import lru_cache
 from typing import List
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 
@@ -56,14 +57,14 @@ class Settings(BaseSettings):
     # Database Configuration
     # PostgreSQL connection settings with connection pooling
     DATABASE_URL: str = (
-        "postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db"
+        "postgresql://aquaculture:CHANGE_ME_IN_PRODUCTION@postgres:5432/aquaculture_db"
     )
     DATABASE_POOL_SIZE: int = 20  # Max connections in pool
     DATABASE_MAX_OVERFLOW: int = 10  # Additional connections when pool is full
 
     # Redis Configuration
     # In-memory cache and session store settings
-    REDIS_URL: str = "redis://redis:6379/0"  # Internal docker network uses 6379
+    REDIS_URL: str = "redis://redis:6379/0"  # Docker internal network
     REDIS_MAX_CONNECTIONS: int = 50  # Connection pool size
 
     # Kafka Configuration
@@ -73,16 +74,24 @@ class Settings(BaseSettings):
 
     # Security Configuration
     # Authentication and authorization settings
-    # WARNING: Change these secrets in production!
-    SECRET_KEY: str = "change-this-to-a-secure-random-string-in-production"
-    JWT_SECRET: str = "change-this-to-another-secure-random-string"
+    # These MUST be set via environment variables in production
+    SECRET_KEY: str = Field(
+        default="dev-secret-key-for-development-only-change-in-production-12345678",
+        description="Application secret key - MUST be set via environment variable in production",
+        min_length=32
+    )
+    JWT_SECRET: str = Field(
+        default="dev-jwt-secret-for-development-only-change-in-production-87654321", 
+        description="JWT signing secret - MUST be set via environment variable in production",
+        min_length=32
+    )
     JWT_ALGORITHM: str = "HS256"  # HMAC using SHA-256
     JWT_EXPIRATION_HOURS: int = 24
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours in minutes
 
     # CORS Configuration
     # Cross-Origin Resource Sharing settings for web clients
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001", "http://localhost:8080"]
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: List[str] = ["*"]  # Allow all HTTP methods
     CORS_ALLOW_HEADERS: List[str] = ["*"]  # Allow all headers
@@ -120,6 +129,40 @@ class Settings(BaseSettings):
 
         env_file = ".env"  # Load from .env file
         case_sensitive = True  # Environment variables are case-sensitive
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._validate_production_security()
+
+    def _validate_production_security(self):
+        """Validate security configuration for production deployment"""
+        if self.ENVIRONMENT == "production":
+            security_issues = []
+            
+            # Check for default/weak secrets
+            if self.SECRET_KEY in ["dev-secret-key-change-in-production", "change-this-to-a-secure-random-string-in-production", "PRODUCTION_SECRET_KEY_REQUIRED_FROM_ENV"]:
+                security_issues.append("SECRET_KEY is using default value - MUST be set via environment variable!")
+            
+            if self.JWT_SECRET in ["dev-jwt-secret-change-in-production", "change-this-to-another-secure-random-string", "PRODUCTION_JWT_SECRET_REQUIRED_FROM_ENV"]:
+                security_issues.append("JWT_SECRET is using default value - MUST be set via environment variable!")
+            
+            # Check secret strength
+            if len(self.SECRET_KEY) < 32:
+                security_issues.append("SECRET_KEY is too short (minimum 32 characters)")
+            
+            if len(self.JWT_SECRET) < 32:
+                security_issues.append("JWT_SECRET is too short (minimum 32 characters)")
+            
+            # Check database URL doesn't contain default passwords
+            if any(pwd in self.DATABASE_URL for pwd in ["aquaculture123", "CHANGE_ME_IN_PRODUCTION"]):
+                security_issues.append("DATABASE_URL contains default password - SECURITY RISK!")
+            
+            if security_issues:
+                raise ValueError(
+                    f"PRODUCTION SECURITY VALIDATION FAILED:\n" + 
+                    "\n".join(f"- {issue}" for issue in security_issues) +
+                    "\n\nPlease set proper secrets via environment variables before deploying to production."
+                )
 
 
 @lru_cache()

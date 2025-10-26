@@ -1,0 +1,377 @@
+# ============================================================================
+# ENTERPRISE JENKINS CONFIGURATION
+# ============================================================================
+# 
+# This configuration sets up Jenkins with enterprise-grade features:
+# - LDAP authentication integration
+# - Enterprise security policies
+# - Compliance and audit logging
+# - Integration with enterprise tools
+# - High availability configuration
+# ============================================================================
+
+# Jenkins Master Configuration
+jenkins:
+  systemMessage: "Enterprise Aquaculture ML Platform CI/CD"
+  numExecutors: 0  # Use agents only for security
+  mode: EXCLUSIVE
+  
+  # Enterprise Security Configuration
+  securityRealm:
+    ldap:
+      configurations:
+        - server: "ldap://enterprise.local:389"
+          rootDN: "dc=enterprise,dc=local"
+          userSearchBase: "ou=users"
+          userSearch: "uid={0}"
+          groupSearchBase: "ou=groups"
+          groupSearchFilter: "member={0}"
+          managerDN: "cn=jenkins,ou=service-accounts,dc=enterprise,dc=local"
+          managerPasswordSecret: "${LDAP_MANAGER_PASSWORD}"
+          inhibitInferRootDN: false
+          disableMailAddressResolver: false
+          cache:
+            size: 100
+            ttl: 300
+  
+  # Enterprise Authorization Strategy
+  authorizationStrategy:
+    roleBased:
+      roles:
+        global:
+          - name: "enterprise-admin"
+            description: "Enterprise administrators with full access"
+            permissions:
+              - "Overall/Administer"
+            assignments:
+              - "enterprise-admins"
+          
+          - name: "devops-engineer"
+            description: "DevOps engineers with build and deploy permissions"
+            permissions:
+              - "Overall/Read"
+              - "Job/Build"
+              - "Job/Cancel"
+              - "Job/Read"
+              - "Job/Workspace"
+              - "Run/Replay"
+              - "Run/Update"
+            assignments:
+              - "devops-team"
+          
+          - name: "developer"
+            description: "Developers with limited build permissions"
+            permissions:
+              - "Overall/Read"
+              - "Job/Build"
+              - "Job/Read"
+              - "Job/Workspace"
+            assignments:
+              - "development-team"
+          
+          - name: "security-auditor"
+            description: "Security team with audit access"
+            permissions:
+              - "Overall/Read"
+              - "Job/Read"
+              - "Run/Artifacts"
+            assignments:
+              - "security-team"
+
+  # Enterprise Agent Configuration
+  clouds:
+    - kubernetes:
+        name: "enterprise-k8s"
+        serverUrl: "https://kubernetes.enterprise.local:6443"
+        namespace: "jenkins-agents"
+        credentialsId: "k8s-service-account"
+        jenkinsUrl: "https://jenkins.enterprise.local"
+        jenkinsTunnel: "jenkins-agent.jenkins.svc.cluster.local:50000"
+        containerCapStr: "100"
+        maxRequestsPerHostStr: "32"
+        retentionTimeout: 5
+        connectTimeout: 10
+        readTimeout: 20
+        
+        templates:
+          - name: "enterprise-python-agent"
+            label: "enterprise-python"
+            nodeUsageMode: EXCLUSIVE
+            containers:
+              - name: "python"
+                image: "nexus.enterprise.local:8443/jenkins/python-agent:3.10-enterprise"
+                ttyEnabled: true
+                command: "/bin/sh -c"
+                args: "cat"
+                resourceRequestCpu: "500m"
+                resourceRequestMemory: "1Gi"
+                resourceLimitCpu: "2000m"
+                resourceLimitMemory: "4Gi"
+                envVars:
+                  - envVar:
+                      key: "ENTERPRISE_MODE"
+                      value: "true"
+              
+              - name: "docker"
+                image: "docker:dind"
+                privileged: true
+                ttyEnabled: true
+                resourceRequestCpu: "500m"
+                resourceRequestMemory: "1Gi"
+                resourceLimitCpu: "1000m"
+                resourceLimitMemory: "2Gi"
+            
+            volumes:
+              - persistentVolumeClaim:
+                  claimName: "jenkins-workspace"
+                  mountPath: "/workspace"
+                  readOnly: false
+            
+            serviceAccount: "jenkins-agent"
+            
+            nodeProperties:
+              - envVars:
+                  env:
+                    - key: "NEXUS_URL"
+                      value: "https://nexus.enterprise.local"
+                    - key: "SONARQUBE_URL"
+                      value: "https://sonarqube.enterprise.local"
+
+# Enterprise Tool Integration
+unclassified:
+  # SonarQube Enterprise Integration
+  sonarGlobalConfiguration:
+    installations:
+      - name: "sonarqube-enterprise"
+        serverUrl: "https://sonarqube.enterprise.local"
+        credentialsId: "sonarqube-token"
+        triggers:
+          skipScmCause: false
+          skipUpstreamCause: false
+        additionalProperties: "sonar.enterprise.license=true"
+  
+  # Nexus Repository Integration
+  nexusConfiguration:
+    nexusUrl: "https://nexus.enterprise.local"
+    credentialsId: "nexus-enterprise-creds"
+    repositories:
+      - id: "maven-central"
+        type: "maven2"
+        format: "maven2"
+        url: "https://nexus.enterprise.local/repository/maven-central/"
+      
+      - id: "pypi-proxy"
+        type: "pypi"
+        format: "pypi"
+        url: "https://nexus.enterprise.local/repository/pypi-proxy/"
+      
+      - id: "docker-registry"
+        type: "docker"
+        format: "docker"
+        url: "https://nexus.enterprise.local:8443/"
+  
+  # Enterprise Slack Integration
+  slackNotifier:
+    baseUrl: "https://enterprise.slack.com/services/hooks/jenkins-ci/"
+    teamDomain: "enterprise"
+    token: "${SLACK_TOKEN}"
+    room: "#devops-alerts"
+    sendAs: "Jenkins Enterprise"
+  
+  # Enterprise Email Configuration
+  mailer:
+    smtpHost: "smtp.enterprise.local"
+    smtpPort: "587"
+    useSsl: false
+    useTls: true
+    charset: "UTF-8"
+    authentication:
+      username: "jenkins@enterprise.local"
+      password: "${SMTP_PASSWORD}"
+    defaultSuffix: "@enterprise.local"
+  
+  # Enterprise Monitoring Integration
+  prometheus:
+    path: "/prometheus"
+    defaultNamespace: "jenkins"
+    jobAttributeName: "jenkins_job"
+    collectingMetricsPeriodInSeconds: 120
+    countSuccessfulBuilds: true
+    countUnstableBuilds: true
+    countFailedBuilds: true
+    countNotBuiltBuilds: true
+    countAbortedBuilds: true
+    fetchTestResults: true
+  
+  # Enterprise Audit Configuration
+  audit-trail:
+    logBuildCause: true
+    logNameChanges: true
+    logNodeOnlineOffline: true
+    logCredentialsUsage: true
+    pattern: "/var/log/jenkins/audit-%g.log"
+    count: 10
+    limit: 1048576
+
+# Enterprise Security Policies
+security:
+  # CSRF Protection
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: false
+  
+  # Content Security Policy
+  contentSecurityPolicyReportOnly: false
+  contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
+  
+  # Enterprise SSL Configuration
+  httpsRedirect: true
+  httpsPort: 8443
+  
+  # Session Configuration
+  sessionTimeout: 480  # 8 hours
+  sessionEviction: true
+
+# Enterprise Compliance Configuration
+compliance:
+  sox:
+    enabled: true
+    auditRetentionDays: 2555  # 7 years
+    requireApprovalForProduction: true
+    segregationOfDuties: true
+  
+  gdpr:
+    enabled: true
+    dataRetentionDays: 1095  # 3 years
+    anonymizePersonalData: true
+  
+  pci:
+    enabled: false  # Enable if handling payment data
+  
+  hipaa:
+    enabled: false  # Enable if handling health data
+
+# Enterprise Backup Configuration
+backup:
+  enabled: true
+  schedule: "H 2 * * *"  # Daily at 2 AM
+  retention: 30  # Keep 30 days of backups
+  location: "/backup/jenkins"
+  excludeBuilds: false
+  
+  s3:
+    enabled: true
+    bucket: "enterprise-jenkins-backups"
+    region: "us-east-1"
+    credentialsId: "aws-backup-credentials"
+
+# Enterprise Monitoring and Alerting
+monitoring:
+  healthCheck:
+    enabled: true
+    endpoint: "/health"
+    authentication: false
+  
+  metrics:
+    enabled: true
+    endpoint: "/metrics"
+    authentication: true
+  
+  alerts:
+    diskSpace:
+      threshold: 85  # Alert when disk usage > 85%
+    
+    buildQueue:
+      threshold: 10  # Alert when queue > 10 jobs
+    
+    agentOffline:
+      enabled: true
+      notificationChannels: ["slack", "email"]
+    
+    buildFailures:
+      consecutiveFailures: 3
+      notificationChannels: ["slack", "email"]
+
+# Enterprise Plugin Configuration
+plugins:
+  required:
+    # Security Plugins
+    - ldap:2.12
+    - role-strategy:3.2.0
+    - matrix-auth:3.1.5
+    - audit-trail:3.13
+    
+    # Enterprise Integration
+    - sonar:2.15
+    - nexus-artifact-uploader:2.13
+    - slack:2.48
+    - prometheus:2.0.10
+    
+    # Build and Deploy
+    - kubernetes:3600.v144b_cd192ca_a_
+    - docker-workflow:1.29
+    - pipeline-stage-view:2.25
+    - blue-ocean:1.25.2
+    
+    # Quality and Testing
+    - junit:1.60
+    - jacoco:3.3.2.1
+    - htmlpublisher:1.31
+    - performance:3.20
+    
+    # Enterprise Compliance
+    - build-timeout:1.27
+    - timestamper:1.17
+    - ws-cleanup:0.42
+    - build-name-setter:2.2.0
+
+# Enterprise Job DSL Configuration
+jobs:
+  - script: |
+      // Enterprise Job DSL for Aquaculture ML Platform
+      multibranchPipelineJob('aquaculture-ml-platform') {
+          displayName('Aquaculture ML Platform - Enterprise')
+          description('Enterprise CI/CD pipeline for Aquaculture ML Platform')
+          
+          branchSources {
+              git {
+                  id('aquaculture-ml-platform')
+                  remote('https://git.enterprise.local/aquaculture/ml-platform.git')
+                  credentialsId('git-enterprise-credentials')
+                  includes('main develop feature/* release/* hotfix/*')
+              }
+          }
+          
+          factory {
+              workflowBranchProjectFactory {
+                  scriptPath('Jenkinsfile')
+              }
+          }
+          
+          configure { node ->
+              node / 'properties' / 'org.jenkinsci.plugins.workflow.multibranch.PipelineTriggerProperty' {
+                  createActionJobsToTrigger('')
+              }
+              
+              // Enterprise compliance properties
+              node / 'properties' / 'com.enterprise.jenkins.ComplianceProperty' {
+                  soxCompliant(true)
+                  gdprCompliant(true)
+                  requiresApproval(true)
+                  auditLevel('FULL')
+              }
+          }
+          
+          orphanedItemStrategy {
+              discardOldItems {
+                  daysToKeep(30)
+                  numToKeep(50)
+              }
+          }
+          
+          triggers {
+              periodicFolderTrigger {
+                  interval('5m')
+              }
+          }
+      }

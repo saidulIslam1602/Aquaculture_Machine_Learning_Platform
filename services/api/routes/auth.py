@@ -8,9 +8,12 @@ from sqlalchemy.orm import Session
 
 from ..core.config import settings
 from ..core.database import get_db
-from ..core.security import create_access_token, get_password_hash, verify_password
+from ..core.security import create_access_token, get_current_user, get_password_hash, verify_password, decode_access_token
 from ..models.user import User
 from ..schemas.user import Token, UserCreate, UserResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security = HTTPBearer()
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
@@ -104,3 +107,41 @@ async def login(
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user_info(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user information.
+    
+    Args:
+        credentials: HTTP authorization credentials
+        db: Database session
+    
+    Returns:
+        User information
+    """
+    # Decode token
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    user_id = payload.get("sub")
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials"
+        )
+    
+    # Fetch user from database
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user

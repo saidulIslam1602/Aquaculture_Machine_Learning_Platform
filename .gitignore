@@ -20,78 +20,98 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-venv/
-env/
-ENV/
 
-# PyTorch
-*.pth
-*.pt
-*.onnx
+# Virtual Environments
+venv/
+venv-enterprise/
+ENV/
+env/
+.venv
+
+# Testing
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*.ipynb
 
-# Environment
+# Environment Variables
 .env
 .env.local
 .env.*.local
-*.env
 
 # IDEs
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 .DS_Store
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.hypothesis/
-
 # Logs
 *.log
 logs/
+*.log.*
 
 # Database
 *.db
 *.sqlite
 *.sqlite3
 
-# Data
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-
-# Models
-models/*.pth
-models/*.pt
-!models/.gitkeep
-
 # Docker
-.dockerignore
+.docker/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production
+/dist
+/build
+
+# ML Models (large files)
+*.pth
+*.onnx
+*.pkl
+*.joblib
+models/*.pth
+models/*.onnx
+
+# Temp files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# OS
+Thumbs.db
+.DS_Store
 
 # Terraform
 *.tfstate
-*.tfstate.*
+*.tfstate.backup
 .terraform/
 *.tfvars
+!terraform.tfvars.example
 
-# Kubernetes
-secrets.yaml
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+!*.crt.example
 
-# Monitoring
-monitoring/grafana/data/
-monitoring/prometheus/data/
-
-# Misc
-.cache/
-tmp/
-temp/
-*.tmp
+# Reports
+*-report.json
+*-report.html
+*-report.xml

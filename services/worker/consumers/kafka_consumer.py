@@ -221,7 +221,7 @@ class FishImageConsumer:
         Process Single Message
 
         Processes fish image message and returns prediction result.
-        Override this method for custom processing logic.
+        Calls the ML inference service for actual predictions.
 
         Args:
             message: Message payload from Kafka
@@ -231,28 +231,76 @@ class FishImageConsumer:
 
         Raises:
             Exception: If processing fails
-
-        Note:
-            This is a placeholder. Actual implementation should
-            call ML inference service.
         """
-        # Extract image data (placeholder for future ML processing)
-        message.get("image_data")
-        image_id = message.get("image_id")
-        metadata = message.get("metadata", {})
+        import base64
+        import requests
+        from PIL import Image
+        import io
+        
+        start_time = time.time()
+        
+        try:
+            # Extract image data and metadata
+            image_data = message.get("image_data")
+            image_id = message.get("image_id")
+            metadata = message.get("metadata", {})
 
-        # TODO: Implement actual ML inference
-        # For now, return mock result
-        result = {
-            "image_id": image_id,
-            "species": "Tilapia",  # Mock prediction
-            "confidence": 0.95,
-            "timestamp": datetime.utcnow().isoformat(),
-            "processing_time_ms": 50,
-            "metadata": metadata,
-        }
+            if not image_data:
+                raise ValueError("No image data provided in message")
 
-        return result
+            # Decode base64 image data
+            try:
+                image_bytes = base64.b64decode(image_data)
+                image = Image.open(io.BytesIO(image_bytes))
+            except Exception as e:
+                raise ValueError(f"Invalid image data: {e}")
+
+            # Call ML inference service
+            try:
+                # Use the inference engine directly
+                from services.ml_service.inference.engine import inference_engine
+                
+                prediction_result = await inference_engine.predict(image)
+                
+                # Format result for Kafka message
+                result = {
+                    "image_id": image_id,
+                    "species": prediction_result["species"],
+                    "confidence": prediction_result["confidence"],
+                    "all_probabilities": prediction_result.get("all_probabilities", {}),
+                    "model_version": prediction_result.get("model_version", "v1.0.0"),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "processing_time_ms": int((time.time() - start_time) * 1000),
+                    "metadata": metadata,
+                }
+                
+                logger.info(f"Processed image {image_id}: {result['species']} ({result['confidence']:.3f})")
+                return result
+                
+            except Exception as e:
+                logger.error(f"ML inference failed for image {image_id}: {e}")
+                # Return error result instead of failing completely
+                return {
+                    "image_id": image_id,
+                    "species": "unknown",
+                    "confidence": 0.0,
+                    "error": str(e),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "processing_time_ms": int((time.time() - start_time) * 1000),
+                    "metadata": metadata,
+                }
+                
+        except Exception as e:
+            logger.error(f"Message processing failed: {e}")
+            return {
+                "image_id": message.get("image_id", "unknown"),
+                "species": "error",
+                "confidence": 0.0,
+                "error": str(e),
+                "timestamp": datetime.utcnow().isoformat(),
+                "processing_time_ms": int((time.time() - start_time) * 1000),
+                "metadata": message.get("metadata", {}),
+            }
 
     def publish_result(self, topic: str, key: str, value: Dict[str, Any]) -> None:
         """

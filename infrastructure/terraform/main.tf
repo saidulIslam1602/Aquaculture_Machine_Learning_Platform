@@ -1,41 +1,14 @@
 # Terraform Configuration for Aquaculture ML Platform
 # Production-grade infrastructure as code
 
-terraform {
-  required_version = ">= 1.5.0"
-  
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "~> 2.23"
-    }
-  }
-  
-  # Remote state storage (best practice)
-  backend "s3" {
-    bucket         = "aquaculture-terraform-state"
-    key            = "prod/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "terraform-state-lock"
-  }
-}
+# Terraform configuration moved to versions.tf
 
 # Provider configuration
 provider "aws" {
   region = var.aws_region
   
   default_tags {
-    tags = {
-      Project     = "aquaculture-ml-platform"
-      Environment = var.environment
-      ManagedBy   = "terraform"
-      Owner       = var.owner_email
-    }
+    tags = local.common_tags
   }
 }
 
@@ -44,12 +17,13 @@ module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "~> 5.0"
   
-  name = "${var.project_name}-vpc"
-  cidr = var.vpc_cidr
+  name = "${local.name_prefix}-vpc"
+  cidr = local.vpc_cidr
   
-  azs             = var.availability_zones
-  private_subnets = var.private_subnet_cidrs
-  public_subnets  = var.public_subnet_cidrs
+  azs             = local.azs
+  private_subnets = local.private_subnet_cidrs
+  public_subnets  = local.public_subnet_cidrs
+  database_subnets = local.database_subnet_cidrs
   
   # Enable NAT Gateway for private subnets
   enable_nat_gateway = true
@@ -74,7 +48,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
   
-  cluster_name    = "${var.project_name}-eks"
+  cluster_name    = "${local.name_prefix}-eks"
   cluster_version = "1.28"
   
   vpc_id     = module.vpc.vpc_id
@@ -105,11 +79,11 @@ module "eks" {
     # General purpose nodes
     general = {
       name           = "general-purpose"
-      instance_types = ["t3.xlarge"]
+      instance_types = [coalesce(var.force_instance_types.eks_nodes, local.config.eks_node_instance_type)]
       
-      min_size     = 2
-      max_size     = 10
-      desired_size = 3
+      min_size     = local.config.eks_min_nodes
+      max_size     = local.config.eks_max_nodes
+      desired_size = local.config.eks_desired_nodes
       
       labels = {
         role = "general"
@@ -156,13 +130,13 @@ module "rds" {
   source  = "terraform-aws-modules/rds/aws"
   version = "~> 6.0"
   
-  identifier = "${var.project_name}-postgres"
+  identifier = "${local.name_prefix}-postgres"
   
   engine               = "postgres"
   engine_version       = "15.4"
   family               = "postgres15"
   major_engine_version = "15"
-  instance_class       = "db.t3.large"
+  instance_class       = coalesce(var.force_instance_types.rds, local.config.rds_instance_class)
   
   allocated_storage     = 100
   max_allocated_storage = 500
@@ -173,12 +147,12 @@ module "rds" {
   port     = 5432
   
   # Multi-AZ for high availability
-  multi_az               = var.environment == "production"
+  multi_az               = local.config.enable_multi_az
   db_subnet_group_name   = module.vpc.database_subnet_group_name
   vpc_security_group_ids = [aws_security_group.rds.id]
   
   # Backup configuration
-  backup_retention_period = 30
+  backup_retention_period = local.backup_retention_period
   backup_window          = "03:00-04:00"
   maintenance_window     = "Mon:04:00-Mon:05:00"
   
@@ -187,8 +161,8 @@ module "rds" {
   performance_insights_enabled    = true
   
   # Deletion protection
-  deletion_protection = var.environment == "production"
-  skip_final_snapshot = var.environment != "production"
+  deletion_protection = coalesce(var.enable_deletion_protection, local.config.enable_deletion_protection)
+  skip_final_snapshot = !coalesce(var.enable_deletion_protection, local.config.enable_deletion_protection)
   
   tags = {
     Name = "${var.project_name}-postgres"
@@ -197,12 +171,12 @@ module "rds" {
 
 # ElastiCache Redis
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project_name}-redis"
+  replication_group_id       = "${local.name_prefix}-redis"
   replication_group_description = "Redis cluster for caching"
   
   engine               = "redis"
   engine_version       = "7.0"
-  node_type            = "cache.t3.medium"
+  node_type            = coalesce(var.force_instance_types.redis, local.config.redis_node_type)
   number_cache_clusters = 2  # Primary + replica
   
   port                       = 6379
@@ -212,7 +186,7 @@ resource "aws_elasticache_replication_group" "redis" {
   
   # Automatic failover
   automatic_failover_enabled = true
-  multi_az_enabled          = var.environment == "production"
+  multi_az_enabled          = local.config.enable_multi_az
   
   # Backup
   snapshot_retention_limit = 5
@@ -229,12 +203,12 @@ resource "aws_elasticache_replication_group" "redis" {
 
 # MSK (Managed Kafka)
 resource "aws_msk_cluster" "kafka" {
-  cluster_name           = "${var.project_name}-kafka"
+  cluster_name           = "${local.name_prefix}-kafka"
   kafka_version          = "3.5.1"
   number_of_broker_nodes = 3
   
   broker_node_group_info {
-    instance_type   = "kafka.t3.small"
+    instance_type   = coalesce(var.force_instance_types.kafka, local.config.kafka_instance_type)
     client_subnets  = module.vpc.private_subnets
     security_groups = [aws_security_group.kafka.id]
     
@@ -269,7 +243,7 @@ resource "aws_msk_cluster" "kafka" {
 
 # S3 Bucket for model storage
 resource "aws_s3_bucket" "models" {
-  bucket = "${var.project_name}-models-${var.environment}"
+  bucket = "${local.name_prefix}-models-${random_string.bucket_suffix.result}"
   
   tags = {
     Name = "${var.project_name}-models"
@@ -291,31 +265,57 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "models" {
   
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3.arn
     }
+    bucket_key_enabled = true
   }
 }
 
-# Outputs
-output "eks_cluster_endpoint" {
-  description = "EKS cluster endpoint"
-  value       = module.eks.cluster_endpoint
+# ============================================================================
+# ENTERPRISE SQL SERVER DATABASE (Optional)
+# ============================================================================
+
+# RDS SQL Server for Enterprise Applications
+resource "aws_db_instance" "sqlserver" {
+  count = var.enable_enterprise_databases ? 1 : 0
+  
+  identifier = "${local.name_prefix}-sqlserver"
+  
+  engine         = "sqlserver-ex"
+  engine_version = "15.00.4236.7.v1"
+  instance_class = coalesce(var.force_instance_types.sqlserver, local.config.sqlserver_instance_class)
+  
+  allocated_storage     = 100
+  max_allocated_storage = 500
+  storage_encrypted     = true
+  kms_key_id           = aws_kms_key.rds.arn
+  
+  db_name  = null  # SQL Server doesn't use db_name parameter
+  username = "sqladmin"
+  port     = 1433
+  
+  # Multi-AZ for high availability
+  multi_az               = local.config.enable_multi_az
+  db_subnet_group_name   = module.vpc.database_subnet_group_name
+  vpc_security_group_ids = var.enable_enterprise_databases ? [aws_security_group.sqlserver[0].id] : []
+  
+  # Backup configuration
+  backup_retention_period = local.backup_retention_period
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "Mon:04:00-Mon:05:00"
+  
+  # Performance Insights
+  performance_insights_enabled = true
+  
+  # Deletion protection
+  deletion_protection = coalesce(var.enable_deletion_protection, local.config.enable_deletion_protection)
+  skip_final_snapshot = !coalesce(var.enable_deletion_protection, local.config.enable_deletion_protection)
+  
+  tags = merge(local.common_tags, {
+    Name     = "${local.name_prefix}-sqlserver"
+    Database = "SQLServer"
+  })
 }
 
-output "rds_endpoint" {
-  description = "RDS endpoint"
-  value       = module.rds.db_instance_endpoint
-  sensitive   = true
-}
-
-output "redis_endpoint" {
-  description = "Redis endpoint"
-  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
-  sensitive   = true
-}
-
-output "kafka_bootstrap_brokers" {
-  description = "Kafka bootstrap brokers"
-  value       = aws_msk_cluster.kafka.bootstrap_brokers_tls
-  sensitive   = true
-}
+# Outputs moved to outputs.tf for better organization

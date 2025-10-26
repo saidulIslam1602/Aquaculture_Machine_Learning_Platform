@@ -1,0 +1,63 @@
+# ============================================================================
+# Monitoring Kustomization Configuration
+# ============================================================================
+#
+# This kustomization.yaml file consolidates all monitoring resources for the
+# Aquaculture ML Platform. It includes ServiceMonitors, PrometheusRules,
+# and monitoring configurations that can be deployed alongside the platform
+# or independently for monitoring infrastructure.
+#
+# MONITORING COMPONENTS:
+# - ServiceMonitors: Prometheus service discovery and scraping configuration
+# - PrometheusRules: Alerting rules for comprehensive platform monitoring
+# - Dashboards: Grafana dashboard configurations (future extension)
+# - Alerting: AlertManager integration and notification routing
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: aquaculture-platform-monitoring
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Monitoring resources
+resources:
+- servicemonitor.yaml
+- prometheus-rules.yaml
+
+# Common labels for all monitoring resources
+commonLabels:
+  app.kubernetes.io/name: aquaculture-monitoring
+  app.kubernetes.io/component: monitoring
+  app.kubernetes.io/part-of: aquaculture-platform
+  prometheus: kube-prometheus
+
+# Common annotations for monitoring resources
+commonAnnotations:
+  monitoring.aquaculture.com/version: "1.0.0"
+  prometheus.io/scrape: "true"
+  grafana.com/dashboard: "aquaculture-platform"
+
+# Namespace for monitoring resources (can be overridden)
+namespace: monitoring
+
+# Configuration generators for monitoring
+configMapGenerator:
+- name: monitoring-config
+  literals:
+  - PROMETHEUS_RETENTION=30d
+  - ALERTMANAGER_RETENTION=120h
+  - GRAFANA_ADMIN_USER=admin
+  - SCRAPE_INTERVAL=30s
+  - EVALUATION_INTERVAL=30s
+
+# Patches for environment-specific monitoring configuration
+patches: []
+
+# Labels to be applied with selectors
+labels:
+- includeSelectors: true
+  pairs:
+    monitoring.aquaculture.com/enabled: "true"

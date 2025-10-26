@@ -1,0 +1,184 @@
+# ============================================================================
+# Base ML Service Deployment
+# ============================================================================
+#
+# This file defines the base ML service deployment configuration that
+# provides machine learning inference capabilities for fish classification.
+#
+# FEATURES:
+# - PyTorch-based ML inference
+# - GPU support (when available)
+# - Model versioning and hot-swapping
+# - Batch processing capabilities
+# - Performance monitoring
+# - Resource-intensive workload optimization
+# ============================================================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-service
+  labels:
+    app: ml-service
+    component: ml-inference
+    tier: ml
+    app.kubernetes.io/name: ml-service
+    app.kubernetes.io/component: ml-inference
+    app.kubernetes.io/part-of: aquaculture-platform
+spec:
+  replicas: 1  # Base replica count (resource-intensive)
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ml-service
+      component: ml-inference
+  template:
+    metadata:
+      labels:
+        app: ml-service
+        component: ml-inference
+        tier: ml
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: ml-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: ml-inference
+        image: aquaculture/ml-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8001
+          protocol: TCP
+        - name: metrics
+          containerPort: 8001
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: ENVIRONMENT
+        - name: MODEL_PATH
+          value: "/app/models"
+        - name: INFERENCE_DEVICE
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: INFERENCE_DEVICE
+        - name: BATCH_SIZE
+          valueFrom:
+            configMapKeyRef:
+              name: ml-config
+              key: BATCH_SIZE
+        envFrom:
+        - configMapRef:
+            name: ml-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+            # GPU resources will be added in overlays if available
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 60  # ML models take time to load
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 20  # Allow extra time for model loading
+          successThreshold: 1
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: models
+          mountPath: /app/models
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: var-log
+          mountPath: /var/log
+      volumes:
+      - name: models
+        configMap:
+          name: ml-models
+          optional: true
+      - name: tmp
+        emptyDir:
+          sizeLimit: 1Gi
+      - name: var-log
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 60  # Allow time for graceful shutdown
+
+---
+# Service for ML Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-service
+  labels:
+    app: ml-service
+    component: ml-inference
+    tier: ml
+    app.kubernetes.io/name: ml-service
+    app.kubernetes.io/component: ml-inference
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8001
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: ml-service
+    component: ml-inference
+
+---
+# ServiceAccount for ML Service
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ml-service
+  labels:
+    app: ml-service
+    component: ml-inference
+    app.kubernetes.io/name: ml-service
+    app.kubernetes.io/component: ml-inference

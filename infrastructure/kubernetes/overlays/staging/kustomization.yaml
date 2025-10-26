@@ -1,0 +1,210 @@
+# ============================================================================
+# Staging Environment Kustomization
+# ============================================================================
+#
+# This kustomization.yaml file defines the staging environment configuration
+# for the Aquaculture ML Platform. It extends the base configuration with
+# staging-specific settings, resource limits, and environment variables.
+#
+# STAGING CHARACTERISTICS:
+# - Lower resource limits for cost optimization
+# - Development-friendly logging and debugging
+# - Reduced replica counts for testing
+# - Staging-specific ingress and DNS
+# - Development database with relaxed constraints
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: aquaculture-platform-staging
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Reference to base configuration
+resources:
+- ../../base
+
+# Staging-specific namespace
+namespace: aquaculture-staging
+
+# Staging-specific name prefix
+namePrefix: staging-
+
+# Common labels for staging environment
+commonLabels:
+  environment: staging
+  app.kubernetes.io/instance: staging
+
+# Common annotations for staging
+commonAnnotations:
+  platform.aquaculture.com/environment: "staging"
+  platform.aquaculture.com/purpose: "testing"
+  platform.aquaculture.com/cost-center: "development"
+
+# Staging-specific image tags (typically latest or development builds)
+images:
+- name: aquaculture/api
+  newTag: "staging-latest"
+- name: aquaculture/ml-service
+  newTag: "staging-latest"  
+- name: aquaculture/worker
+  newTag: "staging-latest"
+
+# Staging replica counts (reduced for cost optimization)
+replicas:
+- name: api-service
+  count: 1
+- name: ml-service
+  count: 1
+- name: worker-service
+  count: 1
+
+# Configuration maps for staging environment
+configMapGenerator:
+- name: api-config
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=DEBUG
+  - DATABASE_POOL_SIZE=5
+  - DATABASE_MAX_OVERFLOW=10
+  - REDIS_MAX_CONNECTIONS=10
+  - ML_SERVICE_URL=http://staging-ml-service:8001
+  - WORKER_CONCURRENCY=2
+  - ENABLE_CORS=true
+  - DEBUG_MODE=true
+
+- name: ml-config
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=DEBUG
+  - MODEL_CACHE_SIZE=1
+  - BATCH_SIZE=16
+  - MAX_WORKERS=2
+  - ENABLE_MODEL_VERSIONING=true
+  - MODEL_UPDATE_INTERVAL=3600
+
+- name: worker-config
+  literals:
+  - ENVIRONMENT=staging
+  - LOG_LEVEL=DEBUG
+  - CELERY_BROKER_URL=redis://staging-redis:6379/0
+  - CELERY_RESULT_BACKEND=redis://staging-redis:6379/0
+  - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  - WORKER_PREFETCH_MULTIPLIER=1
+  - TASK_SOFT_TIME_LIMIT=300
+  - TASK_TIME_LIMIT=600
+
+- name: database-config
+  literals:
+  - POSTGRES_DB=aquaculture_staging
+  - POSTGRES_MAX_CONNECTIONS=50
+  - POSTGRES_SHARED_BUFFERS=128MB
+  - POSTGRES_EFFECTIVE_CACHE_SIZE=256MB
+
+- name: postgresql-config
+  files:
+  - postgresql.conf
+
+- name: redis-config
+  files:
+  - redis.conf
+
+# Secret generators (use external secret management in production)
+secretGenerator:
+- name: api-secrets
+  literals:
+  - jwt-secret=staging-jwt-secret-change-me
+  - database-url=postgresql://staging_user:staging_pass@staging-postgresql:5432/aquaculture_staging
+
+- name: ml-secrets
+  literals:
+  - model-signing-key=staging-model-key-change-me
+  - database-url=postgresql://staging_user:staging_pass@staging-postgresql:5432/aquaculture_staging
+
+- name: worker-secrets
+  literals:
+  - database-url=postgresql://staging_user:staging_pass@staging-postgresql:5432/aquaculture_staging
+
+- name: database-secrets
+  literals:
+  - postgres-user=staging_user
+  - postgres-password=staging_pass
+  - postgres-exporter-dsn=postgresql://staging_user:staging_pass@localhost:5432/aquaculture_staging?sslmode=disable
+
+- name: redis-secrets
+  literals:
+  - redis-password=staging-redis-pass
+
+# Patches to modify base resources for staging
+patches:
+# Reduce resource limits for staging
+- target:
+    kind: Deployment
+    name: api-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "256Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "512Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "100m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "250m"
+
+- target:
+    kind: Deployment
+    name: ml-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "512Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "1Gi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "200m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "500m"
+
+- target:
+    kind: Deployment
+    name: worker-service
+  patch: |-
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/memory
+      value: "256Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: "512Mi"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/requests/cpu
+      value: "100m"
+    - op: replace
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: "250m"
+
+# Reduce storage for staging database
+- target:
+    kind: StatefulSet
+    name: postgresql
+  patch: |-
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+      value: "5Gi"
+
+# Reduce storage for staging Redis
+- target:
+    kind: StatefulSet
+    name: redis
+  patch: |-
+    - op: replace
+      path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+      value: "2Gi"

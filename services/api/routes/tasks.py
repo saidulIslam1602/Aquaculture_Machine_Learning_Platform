@@ -51,7 +51,7 @@ class TaskStatusResponse(BaseModel):
     completed_at: Optional[datetime] = Field(None, description="Task completion time")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "status": "SUCCESS",
@@ -115,22 +115,46 @@ async def get_task_status(
         - REVOKED: Task was cancelled
     """
     try:
-        # TODO: Get task status from Celery
-        # from celery.result import AsyncResult
-        # task = AsyncResult(task_id)
-
-        # Mock response for now
+        # Get task status from Celery
+        from celery.result import AsyncResult
+        from services.worker.celery_app import celery_app
+        
+        task = AsyncResult(task_id, app=celery_app)
+        
+        # Map Celery states to our response format
+        status_mapping = {
+            'PENDING': 'PENDING',
+            'STARTED': 'STARTED', 
+            'SUCCESS': 'SUCCESS',
+            'FAILURE': 'FAILURE',
+            'RETRY': 'RETRY',
+            'REVOKED': 'REVOKED'
+        }
+        
+        task_status = status_mapping.get(task.state, 'UNKNOWN')
+        task_result = task.result if task.successful() else None
+        task_info = task.info if task.state == 'PROGRESS' else {}
+        
+        # Handle different task states
+        if task.state == 'FAILURE':
+            task_result = {"error": str(task.result)}
+        elif task.state == 'PROGRESS':
+            task_result = task_info.get('result', {})
+            
+        # Get task metadata if available
+        task_meta = getattr(task, 'info', {}) if hasattr(task, 'info') else {}
+        progress = task_meta.get('progress', {"current": 0, "total": 100})
+        
         response = TaskStatusResponse(
             task_id=task_id,
-            status="SUCCESS",
-            result={"species": "Tilapia", "confidence": 0.95},
-            progress={"current": 100, "total": 100},
-            created_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
+            status=task_status,
+            result=task_result,
+            progress=progress,
+            created_at=task_meta.get('created_at', datetime.utcnow()),
+            completed_at=task_meta.get('completed_at') if task.ready() else None,
         )
 
-        logger.info(f"Task status retrieved: {task_id}")
-
+        logger.info(f"Task status retrieved: {task_id} - {task_status}")
         return response
 
     except Exception as e:
@@ -176,15 +200,27 @@ async def cancel_task(
         - Cancellation is best-effort (may not be immediate)
     """
     try:
-        # TODO: Cancel task in Celery
-        # from celery.result import AsyncResult
-        # task = AsyncResult(task_id)
-        # task.revoke(terminate=True)
+        # Cancel task in Celery
+        from celery.result import AsyncResult
+        from services.worker.celery_app import celery_app
+        
+        task = AsyncResult(task_id, app=celery_app)
+        
+        # Check if task exists and can be cancelled
+        if task.state in ['PENDING', 'STARTED', 'RETRY']:
+            task.revoke(terminate=True)
+            logger.info(
+                f"Task cancelled: {task_id} by user: {current_user.get('username')}"
+            )
+        else:
+            logger.warning(f"Task {task_id} cannot be cancelled (state: {task.state})")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Task {task_id} cannot be cancelled (current state: {task.state})"
+            )
 
-        logger.info(
-            f"Task cancelled: {task_id} by user: {current_user.get('username')}"
-        )
-
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to cancel task: {e}", exc_info=True)
         raise HTTPException(
@@ -229,21 +265,77 @@ async def list_tasks(
         ```
     """
     try:
-        # TODO: Get tasks from Celery/Database
-
-        # Mock response
-        tasks = [
-            TaskStatusResponse(
-                task_id=f"task-{i}",
-                status="SUCCESS",
-                result={"species": "Tilapia"},
-                created_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
-            )
-            for i in range(page_size)
-        ]
-
-        return TaskListResponse(tasks=tasks, total=100, page=page, page_size=page_size)
+        # Get tasks from Celery active/reserved/scheduled queues
+        from services.worker.celery_app import celery_app
+        from celery.result import AsyncResult
+        
+        # Get active tasks
+        inspect = celery_app.control.inspect()
+        active_tasks = inspect.active()
+        scheduled_tasks = inspect.scheduled()
+        reserved_tasks = inspect.reserved()
+        
+        all_task_ids = []
+        
+        # Collect task IDs from all workers
+        if active_tasks:
+            for worker, tasks in active_tasks.items():
+                all_task_ids.extend([task['id'] for task in tasks])
+                
+        if scheduled_tasks:
+            for worker, tasks in scheduled_tasks.items():
+                all_task_ids.extend([task['id'] for task in tasks])
+                
+        if reserved_tasks:
+            for worker, tasks in reserved_tasks.items():
+                all_task_ids.extend([task['id'] for task in tasks])
+        
+        # Get task details
+        tasks = []
+        for task_id in all_task_ids[:page_size]:  # Simple pagination
+            try:
+                task = AsyncResult(task_id, app=celery_app)
+                
+                # Map Celery states to our response format
+                status_mapping = {
+                    'PENDING': 'PENDING',
+                    'STARTED': 'STARTED', 
+                    'SUCCESS': 'SUCCESS',
+                    'FAILURE': 'FAILURE',
+                    'RETRY': 'RETRY',
+                    'REVOKED': 'REVOKED'
+                }
+                
+                task_status = status_mapping.get(task.state, 'UNKNOWN')
+                
+                # Filter by status if requested
+                if status_filter and task_status != status_filter:
+                    continue
+                
+                task_result = task.result if task.successful() else None
+                if task.state == 'FAILURE':
+                    task_result = {"error": str(task.result)}
+                
+                task_response = TaskStatusResponse(
+                    task_id=task_id,
+                    status=task_status,
+                    result=task_result,
+                    progress={"current": 100 if task.ready() else 50, "total": 100},
+                    created_at=datetime.utcnow(),  # Would need to store this in task metadata
+                    completed_at=datetime.utcnow() if task.ready() else None,
+                )
+                tasks.append(task_response)
+                
+            except Exception as e:
+                logger.warning(f"Could not get details for task {task_id}: {e}")
+                continue
+        
+        # If no active tasks, return empty list
+        if not tasks:
+            tasks = []
+        
+        total_tasks = len(all_task_ids)
+        return TaskListResponse(tasks=tasks, total=total_tasks, page=page, page_size=page_size)
 
     except Exception as e:
         logger.error(f"Failed to list tasks: {e}", exc_info=True)

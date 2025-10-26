@@ -30,9 +30,12 @@ class TestAPIIntegration:
         
         Integration test for health check functionality.
         """
-        # This would test against a real running service
-        # For now, just a placeholder
-        assert True
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            response = await ac.get("/health")
+            assert response.status_code == 200
+            data = response.json()
+            assert "status" in data
+            assert data["status"] in ["healthy", "degraded", "unhealthy"]
     
     @pytest.mark.asyncio
     async def test_authentication_flow_integration(self):
@@ -41,9 +44,35 @@ class TestAPIIntegration:
         
         Tests user registration, login, and token usage.
         """
-        # This would test the complete auth flow
-        # Including database operations
-        assert True
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # Test user registration
+            user_data = {
+                "username": "testuser_integration",
+                "email": "test_integration@example.com",
+                "password": "testpassword123",
+                "full_name": "Test User Integration"
+            }
+            
+            register_response = await ac.post("/api/v1/auth/register", json=user_data)
+            assert register_response.status_code == 201
+            
+            # Test user login
+            login_data = {
+                "username": user_data["username"],
+                "password": user_data["password"]
+            }
+            
+            login_response = await ac.post("/api/v1/auth/login", data=login_data)
+            assert login_response.status_code == 200
+            
+            login_result = login_response.json()
+            assert "access_token" in login_result
+            assert login_result["token_type"] == "bearer"
+            
+            # Test authenticated endpoint
+            headers = {"Authorization": f"Bearer {login_result['access_token']}"}
+            profile_response = await ac.get("/api/v1/auth/me", headers=headers)
+            assert profile_response.status_code == 200
     
     @pytest.mark.asyncio
     async def test_ml_prediction_integration(self):
@@ -52,8 +81,55 @@ class TestAPIIntegration:
         
         Tests the integration between API and ML service.
         """
-        # This would test actual ML service calls
-        assert True
+        async with AsyncClient(app=app, base_url="http://test") as ac:
+            # First authenticate
+            user_data = {
+                "username": "testuser_ml",
+                "email": "test_ml@example.com", 
+                "password": "testpassword123",
+                "full_name": "Test ML User"
+            }
+            
+            await ac.post("/api/v1/auth/register", json=user_data)
+            
+            login_response = await ac.post("/api/v1/auth/login", data={
+                "username": user_data["username"],
+                "password": user_data["password"]
+            })
+            
+            token = login_response.json()["access_token"]
+            headers = {"Authorization": f"Bearer {token}"}
+            
+            # Test ML prediction with sample base64 image
+            import base64
+            from PIL import Image
+            import io
+            
+            # Create a simple test image
+            img = Image.new('RGB', (224, 224), color='blue')
+            img_buffer = io.BytesIO()
+            img.save(img_buffer, format='JPEG')
+            img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
+            
+            prediction_data = {
+                "image_base64": img_base64,
+                "model_version": "v1.0.0"
+            }
+            
+            # This might fail if no model is available, but should return proper error
+            prediction_response = await ac.post(
+                "/api/v1/ml/predict", 
+                json=prediction_data, 
+                headers=headers
+            )
+            
+            # Should either succeed with prediction or fail gracefully
+            assert prediction_response.status_code in [200, 500]
+            
+            if prediction_response.status_code == 200:
+                result = prediction_response.json()
+                assert "species" in result
+                assert "confidence" in result
 
 
 class TestDatabaseIntegration:

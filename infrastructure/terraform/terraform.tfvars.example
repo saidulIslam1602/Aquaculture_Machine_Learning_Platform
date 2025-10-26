@@ -1,0 +1,177 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and customize the values
+
+# ============================================================================
+# BASIC CONFIGURATION
+# ============================================================================
+
+# AWS region where resources will be deployed
+aws_region = "us-east-1"
+
+# Environment name (development, staging, production)
+environment = "production"
+
+# Project name for resource naming and tagging
+project_name = "aquaculture-ml"
+
+# Owner email for resource tagging and notifications
+owner_email = "admin@yourcompany.com"
+
+# ============================================================================
+# NETWORKING CONFIGURATION
+# ============================================================================
+
+# VPC CIDR block (leave default for 10.0.0.0/16)
+vpc_cidr = "10.0.0.0/16"
+
+# Availability zones (leave empty to auto-select)
+# availability_zones = ["us-east-1a", "us-east-1b", "us-east-1c"]
+
+# Subnet CIDRs (leave empty for auto-calculation)
+# private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+# public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+# ============================================================================
+# SECURITY CONFIGURATION
+# ============================================================================
+
+# Create bastion host for secure access
+create_bastion = false
+
+# CIDR blocks allowed to access bastion (if created)
+# bastion_allowed_cidr_blocks = ["203.0.113.0/24"]  # Replace with your office IP
+
+# ============================================================================
+# MONITORING AND LOGGING
+# ============================================================================
+
+# Enable detailed monitoring and logging
+enable_monitoring = true
+
+# CloudWatch log retention period (days)
+log_retention_days = 30
+
+# Enable VPC Flow Logs
+enable_vpc_flow_logs = true
+
+# ============================================================================
+# RESOURCE SIZING (Optional Overrides)
+# ============================================================================
+
+# Force specific instance types (overrides environment defaults)
+# force_instance_types = {
+#   eks_nodes = "t3.large"
+#   rds       = "db.t3.medium"
+#   redis     = "cache.t3.small"
+#   kafka     = "kafka.t3.medium"
+#   sqlserver = "db.t3.medium"
+#   oracle    = "db.t3.large"
+# }
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+# Enable deletion protection for critical resources
+# enable_deletion_protection = true
+
+# Create ECR repositories for container images
+create_ecr_repositories = true
+
+# ============================================================================
+# ENTERPRISE FEATURE FLAGS
+# ============================================================================
+
+# Enable enterprise database support (SQL Server, Oracle)
+enable_enterprise_databases = false
+
+# Enable Oracle database (requires enable_enterprise_databases = true)
+enable_oracle_database = false
+
+# Enable enterprise security features (WAF, GuardDuty)
+enable_enterprise_security = false
+
+# Enable enterprise compliance features (Config, CloudTrail)
+enable_enterprise_compliance = false
+
+# Enable enterprise authentication (LDAP, SAML, Secrets Manager)
+enable_enterprise_auth = false
+
+# Enable enterprise monitoring (X-Ray, enhanced CloudWatch)
+enable_enterprise_monitoring = false
+
+# Enable enterprise messaging (RabbitMQ, ActiveMQ support)
+enable_enterprise_messaging = false
+
+# ============================================================================
+# TAGGING
+# ============================================================================
+
+# Additional tags to apply to all resources
+additional_tags = {
+  Department = "Engineering"
+  Team       = "MLOps"
+  CostCenter = "R&D"
+}
+
+# Cost center for billing
+cost_center = "Engineering"
+
+# Compliance level (low, medium, high)
+compliance_level = "medium"
+
+# ============================================================================
+# ENVIRONMENT-SPECIFIC EXAMPLES
+# ============================================================================
+
+# Development Environment Example:
+# environment = "development"
+# log_retention_days = 7
+# create_bastion = true
+# enable_deletion_protection = false
+# additional_tags = {
+#   Environment = "Development"
+#   AutoShutdown = "true"
+# }
+
+# Staging Environment Example:
+# environment = "staging"
+# log_retention_days = 14
+# enable_monitoring = true
+# force_instance_types = {
+#   eks_nodes = "t3.medium"
+#   rds       = "db.t3.small"
+# }
+
+# Production Environment Example:
+# environment = "production"
+# log_retention_days = 90
+# enable_deletion_protection = true
+# compliance_level = "high"
+# force_instance_types = {
+#   eks_nodes = "t3.xlarge"
+#   rds       = "db.r5.large"
+#   redis     = "cache.r5.large"
+#   kafka     = "kafka.m5.xlarge"
+#   sqlserver = "db.r5.large"
+#   oracle    = "db.r5.xlarge"
+# }
+
+# Enterprise Environment Example (Full Features):
+# environment = "production"
+# compliance_level = "high"
+# enable_enterprise_databases = true
+# enable_oracle_database = true
+# enable_enterprise_security = true
+# enable_enterprise_compliance = true
+# enable_enterprise_auth = true
+# enable_enterprise_monitoring = true
+# enable_enterprise_messaging = true
+# force_instance_types = {
+#   eks_nodes = "c5.2xlarge"
+#   rds       = "db.r5.2xlarge"
+#   redis     = "cache.r5.xlarge"
+#   kafka     = "kafka.m5.2xlarge"
+#   sqlserver = "db.r5.2xlarge"
+#   oracle    = "db.r5.4xlarge"
+# }

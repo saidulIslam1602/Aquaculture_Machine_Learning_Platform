@@ -1,0 +1,84 @@
+# ============================================================================
+# Base Kustomization Configuration
+# ============================================================================
+#
+# This kustomization.yaml file defines the base Kubernetes resources for the
+# Aquaculture ML Platform. It includes all core services, configurations,
+# and common labels that will be inherited by environment-specific overlays.
+#
+# ARCHITECTURE:
+# - API Service: FastAPI backend with authentication and core business logic
+# - ML Service: TensorFlow Serving for model inference and predictions  
+# - Worker Service: Celery workers for background task processing
+# - Database: PostgreSQL with monitoring and persistence
+# - Cache: Redis for session storage and message brokering
+# - Monitoring: Prometheus exporters and health checks
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: aquaculture-platform-base
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+# Base resources that define the core platform components
+resources:
+- namespace.yaml
+- api-service.yaml
+- ml-service.yaml
+- worker-service.yaml
+- database.yaml
+- redis.yaml
+
+# Common labels applied to all resources
+commonLabels:
+  app.kubernetes.io/name: aquaculture-platform
+  app.kubernetes.io/instance: base
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+# Common annotations applied to all resources
+commonAnnotations:
+  platform.aquaculture.com/version: "1.0.0"
+  platform.aquaculture.com/release: "neptune"
+  platform.aquaculture.com/component: "base"
+
+# Name prefix for all resources (can be overridden in overlays)
+namePrefix: ""
+
+# Namespace for all resources (can be overridden in overlays)  
+namespace: aquaculture-platform
+
+# Images that can be updated across environments
+images:
+- name: aquaculture/api
+  newTag: "1.0.0"
+- name: aquaculture/ml-service  
+  newTag: "1.0.0"
+- name: aquaculture/worker
+  newTag: "1.0.0"
+
+# Resource transformations
+replicas:
+- name: api-service
+  count: 2
+- name: ml-service
+  count: 1
+- name: worker-service
+  count: 2
+
+# Configuration and secret generators (to be defined in overlays)
+configMapGenerator: []
+secretGenerator: []
+
+# Patches that can be applied (typically used in overlays)
+patches: []
+
+# Additional metadata
+labels:
+- includeSelectors: true
+  pairs:
+    tier: backend
+    environment: base

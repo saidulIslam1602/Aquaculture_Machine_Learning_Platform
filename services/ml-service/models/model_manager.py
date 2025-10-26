@@ -192,7 +192,7 @@ class ModelManager:
         """
         return sum(p.numel() for p in model.parameters())
 
-    def load_model(self, version: str, force_reload: bool = False) -> nn.Module:
+    async def load_model(self, version: str, force_reload: bool = False) -> nn.Module:
         """
         Load Model from Disk
 
@@ -230,13 +230,18 @@ class ModelManager:
             if version in self.models and not force_reload:
                 return self.models[version]
 
-            # Construct model path
-            model_path = Path(ml_settings.MODEL_BASE_PATH) / f"{version}" / "model.pth"
+            # Use enterprise model registry to download model
+            from ..core.model_registry import model_registry
+            
+            model_path = await model_registry.download_model(
+                model_name=ml_settings.MODEL_NAME,
+                version=version
+            )
+            
+            if not model_path:
+                raise FileNotFoundError(f"Model not found in registry: {ml_settings.MODEL_NAME}:{version}")
 
-            if not model_path.exists():
-                raise FileNotFoundError(f"Model not found: {model_path}")
-
-            logger.info(f"Loading model from: {model_path}")
+            logger.info(f"Loading model from registry: {model_path}")
 
             try:
                 # Load checkpoint
@@ -375,7 +380,7 @@ class ModelManager:
 
         logger.info("Model warm-up complete")
 
-    def get_model(self, version: Optional[str] = None) -> nn.Module:
+    async def get_model(self, version: Optional[str] = None) -> nn.Module:
         """
         Get Model Instance
 
@@ -389,14 +394,14 @@ class ModelManager:
 
         Example:
             >>> manager = ModelManager()
-            >>> model = manager.get_model()  # Uses active version
-            >>> model = manager.get_model("v1.1.0")  # Specific version
+            >>> model = await manager.get_model()  # Uses active version
+            >>> model = await manager.get_model("v1.1.0")  # Specific version
         """
         if version is None:
             version = ml_settings.ACTIVE_MODEL_VERSION
 
         if version not in self.models:
-            self.load_model(version)
+            await self.load_model(version)
 
         return self.models[version]
 
