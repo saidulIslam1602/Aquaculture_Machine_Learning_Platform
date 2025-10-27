@@ -1,23 +1,50 @@
-# ============================================================================
-# ENTERPRISE ISTIO GATEWAY CONFIGURATION
-# ============================================================================
+# =============================================================================
+# ENTERPRISE ISTIO SERVICE MESH - AQUACULTURE PLATFORM ADVANCED NETWORKING
+# =============================================================================
 #
-# This configuration sets up enterprise-grade Istio Gateway for:
-# - Secure ingress traffic management with SSL/TLS termination
-# - Enterprise authentication and authorization integration
-# - Advanced traffic routing and load balancing
-# - Enterprise security policies and compliance
-# - Multi-environment traffic management (staging/production)
-# - Enterprise monitoring and observability integration
+# WHAT IS THIS FILE?
+# This file configures Istio, an advanced "service mesh" that provides
+# enterprise-grade networking, security, and observability for the aquaculture
+# platform. Think of it as an "intelligent traffic control system" for services.
 #
-# ENTERPRISE FEATURES:
+# WHAT IS ISTIO SERVICE MESH?
+# Istio is like having a smart network layer that:
+# - Routes traffic between services intelligently
+# - Provides advanced security (encryption, authentication)
+# - Monitors all communication between services
+# - Handles failures gracefully (retries, circuit breakers)
+# - Manages different versions of services (canary deployments)
+#
+# WHY USE ENTERPRISE ISTIO?
+# Enterprise environments need advanced features:
+# - Compliance: SOX, GDPR, PCI requirements
+# - Security: Mutual TLS, advanced authentication
+# - Observability: Detailed monitoring and tracing
+# - Reliability: Circuit breakers, retries, timeouts
+# - Traffic Management: Canary deployments, A/B testing
+#
+# ENTERPRISE FEATURES IN THIS CONFIG:
 # - SSL/TLS termination with enterprise certificates
-# - LDAP and SAML authentication integration
-# - Enterprise security headers and policies
-# - Advanced rate limiting and DDoS protection
-# - Enterprise compliance and audit logging
+# - LDAP/SAML authentication integration
+# - Advanced security headers and policies
+# - Rate limiting and DDoS protection
+# - Compliance audit logging
 # - Multi-tenant traffic isolation
-# ============================================================================
+# - Circuit breakers and retry policies
+# - Canary deployment support
+#
+# KEY COMPONENTS:
+# - Gateway: Entry point for external traffic
+# - VirtualService: Traffic routing rules
+# - DestinationRule: Load balancing and circuit breaker policies
+# - AuthorizationPolicy: Access control rules
+# - PeerAuthentication: Service-to-service security
+# - Telemetry: Monitoring and observability
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 apiVersion: networking.istio.io/v1beta1
 kind: Gateway

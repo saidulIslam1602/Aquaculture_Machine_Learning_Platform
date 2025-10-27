@@ -1,26 +1,50 @@
 #!/bin/bash
 
-# ============================================================================
-# ENTERPRISE HEALTH CHECK SCRIPT FOR AQUACULTURE ML PLATFORM API SERVICE
-# ============================================================================
+# =============================================================================
+# ENTERPRISE HEALTH CHECK SCRIPT - AQUACULTURE PLATFORM MONITORING
+# =============================================================================
 #
-# This script provides comprehensive enterprise-grade health checking for:
-# - Application server health and responsiveness
-# - Database connectivity (PostgreSQL, SQL Server, Redis)
-# - Enterprise security services (LDAP, SSL certificates)
-# - Enterprise monitoring and compliance systems
-# - Resource utilization and performance metrics
-# - Enterprise service dependencies and integrations
+# WHAT IS THIS SCRIPT?
+# This script acts as a "doctor" for the enterprise API service, continuously
+# checking the health of all components to ensure everything is working properly.
+# Think of it as a comprehensive medical checkup that runs automatically.
 #
-# ENTERPRISE HEALTH CHECKS:
-# - Multi-database connectivity validation
-# - SSL certificate expiration monitoring
-# - Enterprise authentication system health
-# - Compliance and audit system status
-# - Performance threshold monitoring
-# - Enterprise monitoring system integration
-# - Service mesh and API gateway connectivity
-# ============================================================================
+# WHAT DOES A HEALTH CHECK DO?
+# Health checks are like taking the "pulse" of the application:
+# - Verifies the API service is responding to requests
+# - Tests database connections (PostgreSQL, SQL Server, Redis)
+# - Checks SSL certificates haven't expired
+# - Monitors system resources (CPU, memory, disk space)
+# - Validates enterprise integrations (LDAP, authentication systems)
+# - Ensures compliance and audit systems are working
+#
+# WHY ARE ENTERPRISE HEALTH CHECKS IMPORTANT?
+# Enterprise environments need more thorough monitoring because:
+# - Multiple systems must work together (databases, authentication, monitoring)
+# - Compliance requirements demand continuous monitoring
+# - Early detection prevents costly downtime
+# - Automated alerts help teams respond quickly to issues
+# - Regulatory audits require proof of system monitoring
+#
+# WHAT GETS CHECKED?
+# - Application Health: API endpoints responding correctly
+# - Database Connectivity: All database connections working
+# - Security Systems: SSL certificates valid, LDAP accessible
+# - Performance Metrics: Response times within acceptable limits
+# - Compliance Systems: Audit logging and monitoring active
+# - Resource Usage: CPU, memory, and disk space adequate
+#
+# HOW IT WORKS:
+# 1. Script runs every 30 seconds (configured in Dockerfile)
+# 2. Performs series of health checks in order of importance
+# 3. Logs results for monitoring and compliance
+# 4. Returns success (0) or failure (1) to Docker/Kubernetes
+# 5. Failed health checks trigger container restart or alerts
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 set -euo pipefail
 

@@ -1,23 +1,48 @@
-# ============================================================================
-# ENTERPRISE GUNICORN CONFIGURATION FOR AQUACULTURE ML PLATFORM
-# ============================================================================
+# =============================================================================
+# ENTERPRISE GUNICORN CONFIGURATION - AQUACULTURE PLATFORM APPLICATION SERVER
+# =============================================================================
 #
-# This configuration file provides enterprise-grade Gunicorn settings for:
-# - High-performance production deployment
-# - Enterprise security and compliance requirements
-# - Advanced monitoring and logging integration
-# - Graceful handling of enterprise workloads
-# - SSL/TLS termination and security headers
-# - Enterprise resource management and optimization
+# WHAT IS THIS FILE?
+# This file configures Gunicorn, a high-performance Python web server that
+# runs the enterprise API service. Think of it as the "engine" that powers
+# the backend application in production environments.
 #
-# ENTERPRISE FEATURES:
-# - SOX and GDPR compliance logging
-# - Enterprise authentication integration
-# - Advanced worker management and scaling
-# - Enterprise monitoring and health checks
-# - Security hardening and attack mitigation
-# - Performance optimization for enterprise workloads
-# ============================================================================
+# WHAT IS GUNICORN?
+# Gunicorn (Green Unicorn) is a Python WSGI HTTP server that:
+# - Handles multiple user requests simultaneously
+# - Manages worker processes for better performance
+# - Provides enterprise-grade reliability and monitoring
+# - Scales automatically based on load
+# - Handles graceful shutdowns and restarts
+#
+# WHY USE GUNICORN FOR ENTERPRISE?
+# Enterprise environments need robust application servers because:
+# - High Traffic: Must handle thousands of concurrent users
+# - Reliability: Cannot afford downtime or crashes
+# - Performance: Must respond quickly under heavy load
+# - Monitoring: Needs detailed metrics and logging
+# - Security: Must protect against attacks and vulnerabilities
+# - Compliance: Must meet regulatory requirements (SOX, GDPR)
+#
+# KEY ENTERPRISE FEATURES CONFIGURED:
+# - Multi-Process Workers: Handle many requests simultaneously
+# - Health Monitoring: Automatic worker restart if problems occur
+# - Security Headers: Protect against common web attacks
+# - Compliance Logging: Detailed audit trails for regulations
+# - Performance Optimization: Memory and CPU tuning
+# - Graceful Shutdowns: Proper handling of deployments and restarts
+#
+# CONFIGURATION SECTIONS:
+# - Server Settings: Basic server configuration (ports, workers)
+# - Performance Tuning: Memory and CPU optimization
+# - Security Settings: SSL, headers, and attack protection
+# - Logging Configuration: Audit trails and monitoring
+# - Enterprise Integration: Compliance and monitoring systems
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 import os
 import multiprocessing

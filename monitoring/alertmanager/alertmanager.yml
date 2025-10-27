@@ -1,19 +1,60 @@
-# Enhanced Alertmanager Configuration for Aquaculture ML Platform
+# =============================================================================
+# ALERTMANAGER CONFIGURATION - AQUACULTURE PLATFORM NOTIFICATION SYSTEM
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This file configures Alertmanager, the notification system that receives
+# alerts from Prometheus and sends them to the right people through the right
+# channels. Think of it as the "emergency dispatcher" for the platform.
+#
+# WHAT IS ALERTMANAGER?
+# Alertmanager is like a "smart notification system" that:
+# - Receives alerts from Prometheus when problems are detected
+# - Decides who should be notified based on the type of problem
+# - Sends notifications through multiple channels (email, Slack, PagerDuty)
+# - Groups similar alerts together to avoid spam
+# - Silences alerts during maintenance windows
+# - Escalates alerts if they're not acknowledged
+#
+# HOW ALERTMANAGER WORKS:
+# 1. Prometheus sends alerts to Alertmanager when rules are triggered
+# 2. Alertmanager groups similar alerts together (e.g., all API errors)
+# 3. Routes alerts to appropriate teams based on severity and component
+# 4. Sends notifications through configured channels
+# 5. Tracks alert lifecycle (firing, resolved, silenced)
+#
+# KEY CONCEPTS FOR BEGINNERS:
+# - Route: Rules that determine where alerts go based on labels
+# - Receiver: A destination for alerts (email, Slack channel, PagerDuty)
+# - Grouping: Combining similar alerts to reduce notification noise
+# - Inhibition: Suppressing alerts when related higher-priority alerts are active
+# - Silencing: Temporarily stopping alerts during maintenance
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
+# =============================================================================
+# GLOBAL CONFIGURATION - NOTIFICATION SETTINGS
+# =============================================================================
+# These settings apply to all notification channels
+
 global:
-  # SMTP configuration for email alerts
-  smtp_smarthost: 'smtp.gmail.com:587'
-  smtp_from: 'alerts@aquaculture-platform.com'
-  smtp_auth_username: 'alerts@aquaculture-platform.com'
-  smtp_auth_password: 'your-app-password'
-  smtp_require_tls: true
+  # Email configuration for sending alert notifications
+  smtp_smarthost: 'smtp.gmail.com:587'                    # Gmail SMTP server
+  smtp_from: 'alerts@aquaculture-platform.com'           # Sender email address
+  smtp_auth_username: 'alerts@aquaculture-platform.com'  # SMTP authentication username
+  smtp_auth_password: 'your-app-password'                 # SMTP authentication password (use app password for Gmail)
+  smtp_require_tls: true                                  # Use encrypted connection
 
-  # Slack configuration
-  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
+  # Slack configuration for team notifications
+  slack_api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'  # Slack webhook URL
 
-  # PagerDuty configuration
-  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+  # PagerDuty configuration for critical incident management
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'  # PagerDuty API endpoint
 
-  # Default resolve timeout
+  # Default time to wait before considering an alert resolved if no updates received
   resolve_timeout: 5m
 
 # Templates for alert notifications

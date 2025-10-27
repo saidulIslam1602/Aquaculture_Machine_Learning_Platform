@@ -1,40 +1,91 @@
-# ============================================================================
-# Base Redis Service Configuration
-# ============================================================================
+# =============================================================================
+# REDIS CACHE SERVICE - AQUACULTURE PLATFORM HIGH-SPEED DATA STORAGE
+# =============================================================================
 #
-# This file defines the base Redis configuration for the Aquaculture ML
-# Platform. Redis serves as the message broker for Celery workers, caching
-# layer for API responses, and session storage.
+# WHAT IS THIS FILE?
+# This file defines how to deploy Redis, a high-speed in-memory data store
+# that acts as the platform's "quick access memory" for frequently used data
+# and real-time communication between services.
 #
-# FEATURES:
-# - Redis 7 with persistence
-# - Master-slave replication ready
-# - Performance monitoring  
-# - Memory optimization
-# - Security configuration
-# - Backup and recovery support
-# ============================================================================
+# WHAT DOES REDIS DO IN THE PLATFORM?
+# - Caching: Stores frequently accessed data for faster API responses
+# - Session storage: Keeps user login sessions and temporary data
+# - Message broker: Handles communication between API and worker services
+# - Task queue: Stores background tasks waiting to be processed
+# - Real-time data: Buffers live sensor readings before database storage
+# - Rate limiting: Tracks API usage to prevent abuse
+# - Temporary calculations: Stores intermediate ML processing results
+#
+# WHY USE REDIS?
+# Redis is extremely fast because it stores data in memory (RAM) rather than
+# on disk. This makes it perfect for:
+# - Sub-millisecond response times
+# - High-throughput operations
+# - Real-time data processing
+# - Temporary data that doesn't need permanent storage
+#
+# KEY TECHNICAL FEATURES:
+# - Redis 7 with latest performance improvements
+# - Persistence options (data can survive restarts)
+# - Memory optimization and eviction policies
+# - Security configuration with authentication
+# - Performance monitoring and metrics
+# - Backup and recovery capabilities
+#
+# REDIS VS POSTGRESQL:
+# - Redis: Fast, temporary, in-memory (like short-term memory)
+# - PostgreSQL: Reliable, permanent, disk-based (like long-term memory)
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: apps/v1
-kind: StatefulSet
+# =============================================================================
+# REDIS STATEFULSET DEFINITION
+# =============================================================================
+
+apiVersion: apps/v1                           # Kubernetes API version for StatefulSets
+kind: StatefulSet                             # Resource type: StatefulSet (for persistent cache)
 metadata:
-  name: redis
+  name: redis                                 # Redis StatefulSet name
+  
+  # =============================================================================
+  # REDIS LABELS - IDENTIFICATION AND ORGANIZATION
+  # =============================================================================
+  
   labels:
-    app: redis
-    component: cache
-    tier: cache
-    app.kubernetes.io/name: redis
-    app.kubernetes.io/component: cache
-    app.kubernetes.io/part-of: aquaculture-platform
+    app: redis                                          # Application identifier
+    component: cache                                    # Component type (cache/memory store)
+    tier: cache                                        # Application tier (caching layer)
+    app.kubernetes.io/name: redis                      # Standard Kubernetes app name
+    app.kubernetes.io/component: cache                 # Standard component label
+    app.kubernetes.io/part-of: aquaculture-platform   # Part of larger platform
+
 spec:
-  serviceName: redis
-  replicas: 1  # Single instance for base
+  # =============================================================================
+  # STATEFULSET CONFIGURATION - CACHE-SPECIFIC SETTINGS
+  # =============================================================================
+  
+  serviceName: redis                          # Headless service name for stable network identity
+  replicas: 1                                # Single instance for base (production may use clustering)
+  
+  # =============================================================================
+  # UPDATE STRATEGY - CACHE UPDATE HANDLING
+  # =============================================================================
+  # Redis can handle rolling updates but may briefly lose cached data
+  
   updateStrategy:
-    type: RollingUpdate
+    type: RollingUpdate                       # Update pods one at a time
+  
+  # =============================================================================
+  # POD SELECTOR - WHICH PODS THIS STATEFULSET MANAGES
+  # =============================================================================
+  
   selector:
     matchLabels:
-      app: redis
-      component: cache
+      app: redis                              # Match pods with this app label
+      component: cache                        # Match pods with this component label
   template:
     metadata:
       labels:

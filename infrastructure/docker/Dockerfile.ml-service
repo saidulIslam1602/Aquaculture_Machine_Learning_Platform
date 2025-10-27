@@ -1,48 +1,133 @@
-# Multi-stage build for ML service
+# =============================================================================
+# ML SERVICE DOCKERFILE - AQUACULTURE PLATFORM AI/ML INFERENCE ENGINE
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This Dockerfile creates a container for the Machine Learning service that
+# provides AI-powered predictions for fish farming. Think of it as packaging
+# the "smart brain" that analyzes data and makes recommendations.
+#
+# WHAT DOES THE ML SERVICE DO?
+# The ML service is the "AI expert" of the platform that:
+# - Analyzes fish health from photos (disease detection)
+# - Predicts optimal feeding schedules and amounts
+# - Forecasts fish growth rates and harvest times
+# - Detects anomalies in water quality and sensor data
+# - Provides yield predictions for business planning
+# - Continuously learns from new data to improve accuracy
+#
+# WHY SEPARATE ML SERVICE?
+# ML workloads have different requirements than regular web services:
+# - Need more CPU/memory for model inference
+# - Require specialized libraries (TensorFlow, PyTorch, scikit-learn)
+# - Benefit from GPU acceleration (when available)
+# - Can be scaled independently based on prediction demand
+# - Isolates ML failures from main API service
+#
+# CONTAINER OPTIMIZATIONS FOR ML:
+# - Multi-stage build to reduce final image size
+# - Specialized ML libraries and dependencies
+# - Model storage directories for loading trained models
+# - Extended health check timeout (ML models take time to load)
+# - OpenMP support for parallel processing (libgomp1)
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: BUILD STAGE - INSTALL ML DEPENDENCIES
+# =============================================================================
+# Install Python ML libraries with build tools and compilers
+
 FROM python:3.10-slim as builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies for ML libraries
+# ML packages often need compilation for optimal performance
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    gcc \                    # C compiler for native extensions
+    g++ \                    # C++ compiler for ML libraries
+    libpq-dev \             # PostgreSQL development headers
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache
 
+# Copy Python requirements (includes ML libraries like TensorFlow, scikit-learn)
 COPY requirements.txt .
+
+# Install Python ML dependencies to user directory
+# ML libraries can be large, so we install once and copy to final stage
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Final stage
+# =============================================================================
+# STAGE 2: RUNTIME STAGE - CREATE ML INFERENCE CONTAINER
+# =============================================================================
+# Create optimized runtime image with ML libraries and application code
+
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies for ML service
 RUN apt-get update && apt-get install -y \
-    libpq5 \
-    libgomp1 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+    libpq5 \                # PostgreSQL client library (runtime)
+    libgomp1 \              # OpenMP library for parallel processing (important for ML)
+    curl \                  # For health checks and model downloads
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache
 
-# Copy Python dependencies
+# Copy Python ML dependencies from builder stage
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy ML service application code
 COPY services/ml-service /app/services/ml-service
 COPY services/__init__.py /app/services/__init__.py
 
-# Create directories
+# =============================================================================
+# ML-SPECIFIC DIRECTORY SETUP
+# =============================================================================
+# Create directories for ML models and data processing
+
+# Create directories for ML operations
 RUN mkdir -p /app/models /app/data
 
-# Create non-root user
+# /app/models: Stores trained ML models (fish health classifier, growth predictor, etc.)
+# /app/data: Temporary storage for data processing and feature extraction
+
+# =============================================================================
+# SECURITY: NON-ROOT USER FOR ML SERVICE
+# =============================================================================
+# Create dedicated user for ML service (security best practice)
+
+# Create ML service user with specific UID
 RUN useradd -m -u 1000 mluser && chown -R mluser:mluser /app
 USER mluser
 
+# =============================================================================
+# CONTAINER CONFIGURATION FOR ML SERVICE
+# =============================================================================
+
+# Expose ML service port (different from API service port 8000)
 EXPOSE 8001
+
+# =============================================================================
+# HEALTH CHECK FOR ML SERVICE
+# =============================================================================
+# ML services need longer startup time due to model loading
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD curl -f http://localhost:8001/health || exit 1
 
+# Health check parameters for ML service:
+# --start-period=60s: Longer grace period (ML models take time to load)
+# Other parameters same as API service
+
+# =============================================================================
+# ML SERVICE STARTUP
+# =============================================================================
+# Start the ML inference service with Uvicorn
+
 CMD ["uvicorn", "services.ml-service.main:app", "--host", "0.0.0.0", "--port", "8001"]
+
+# ML service runs on port 8001 to differentiate from API service (port 8000)

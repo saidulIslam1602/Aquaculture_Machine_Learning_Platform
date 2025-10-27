@@ -1,6 +1,42 @@
-# Enhanced Monitoring & Observability for Aquaculture ML Platform
+# =============================================================================
+# MONITORING & OBSERVABILITY - AQUACULTURE PLATFORM HEALTH DASHBOARD
+# =============================================================================
+#
+# WHAT IS THIS DIRECTORY?
+# This directory contains the complete monitoring system for the aquaculture platform.
+# Think of it as the "mission control center" that watches over every part of the
+# system to ensure everything is running smoothly and alerts teams when problems occur.
+#
+# WHAT IS MONITORING & OBSERVABILITY?
+# Monitoring is like having a "health checkup system" for the platform:
+# - Metrics: Numerical data about performance (CPU, memory, response times)
+# - Logs: Detailed records of what happened and when
+# - Traces: Following requests through the entire system
+# - Alerts: Automatic notifications when something goes wrong
+# - Dashboards: Visual displays showing system health at a glance
+#
+# WHY IS MONITORING ESSENTIAL?
+# In production environments, monitoring is critical because:
+# - Early Problem Detection: Catch issues before users notice them
+# - Performance Optimization: Identify bottlenecks and slow components
+# - Capacity Planning: Know when to scale up resources
+# - Troubleshooting: Quickly find the root cause of problems
+# - Business Insights: Track important business metrics and KPIs
+# - Compliance: Meet regulatory requirements for system monitoring
+#
+# MONITORING STACK OVERVIEW:
+# - Prometheus: Collects and stores performance metrics
+# - Grafana: Creates beautiful dashboards and visualizations
+# - Alertmanager: Sends notifications when problems are detected
+# - ELK Stack: Collects, processes, and searches through logs
+# - Jaeger: Tracks requests across multiple services
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-This directory contains a comprehensive, production-ready monitoring and observability stack designed specifically for the Aquaculture ML Platform. The setup includes metrics collection, alerting, log aggregation, distributed tracing, and advanced visualizations that align with Telenor's observability requirements.
+This directory contains a comprehensive, production-ready monitoring and observability stack designed specifically for the Aquaculture ML Platform. The setup includes metrics collection, alerting, log aggregation, distributed tracing, and advanced visualizations.
 
 ## 🏗️ Architecture Overview
 

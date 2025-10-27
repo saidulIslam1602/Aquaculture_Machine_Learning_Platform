@@ -1,47 +1,90 @@
-# ============================================================================
-# Staging Environment Kustomization
-# ============================================================================
+# =============================================================================
+# STAGING ENVIRONMENT CONFIGURATION - AQUACULTURE PLATFORM TESTING
+# =============================================================================
 #
-# This kustomization.yaml file defines the staging environment configuration
-# for the Aquaculture ML Platform. It extends the base configuration with
-# staging-specific settings, resource limits, and environment variables.
+# WHAT IS THIS FILE?
+# This file customizes the base Kubernetes configuration specifically for the
+# staging environment. Staging is like a "dress rehearsal" where new features
+# are tested before going to production.
+#
+# WHAT IS A STAGING ENVIRONMENT?
+# Staging is a testing environment that:
+# - Mimics production but uses fewer resources (cheaper to run)
+# - Tests new features before they reach real users
+# - Allows developers to experiment safely
+# - Validates deployments and configurations
+# - Provides a place to run integration tests
+#
+# HOW THIS DIFFERS FROM PRODUCTION:
+# - Smaller servers (less CPU, memory, storage) → Lower costs
+# - Fewer replicas (1 instead of 3) → Simpler testing
+# - Debug logging enabled → Better troubleshooting
+# - Relaxed security settings → Easier development
+# - Test data instead of real user data → Safe experimentation
 #
 # STAGING CHARACTERISTICS:
-# - Lower resource limits for cost optimization
-# - Development-friendly logging and debugging
-# - Reduced replica counts for testing
-# - Staging-specific ingress and DNS
-# - Development database with relaxed constraints
-# ============================================================================
+# - Cost-optimized: Uses minimal resources to save money
+# - Developer-friendly: Debug logging and relaxed constraints
+# - Testing-focused: Single replicas for simpler debugging
+# - Temporary: Can be reset/rebuilt frequently
+# - Safe: No real user data or business impact
+#
+# KUSTOMIZE OVERLAYS EXPLAINED:
+# Think of this like customizing a car:
+# - Base configuration = Standard car model
+# - Staging overlay = Economy package (smaller engine, basic features)
+# - Production overlay = Premium package (powerful engine, all features)
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+# =============================================================================
+# STAGING KUSTOMIZATION RESOURCE DEFINITION
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1    # Kustomize API version
+kind: Kustomization                            # Resource type: Kustomization
 
 metadata:
-  name: aquaculture-platform-staging
+  name: aquaculture-platform-staging          # Staging configuration name
   annotations:
-    config.kubernetes.io/local-config: "true"
+    config.kubernetes.io/local-config: "true" # Mark as local config file
 
-# Reference to base configuration
+# =============================================================================
+# BASE CONFIGURATION REFERENCE
+# =============================================================================
+# Import the base configuration and customize it for staging
+
 resources:
-- ../../base
+- ../../base                                   # Path to base configuration directory
 
-# Staging-specific namespace
+# =============================================================================
+# STAGING ENVIRONMENT SETTINGS
+# =============================================================================
+
+# Staging-specific namespace (isolated from production)
 namespace: aquaculture-staging
 
-# Staging-specific name prefix
+# Staging-specific name prefix (helps identify staging resources)
 namePrefix: staging-
 
-# Common labels for staging environment
-commonLabels:
-  environment: staging
-  app.kubernetes.io/instance: staging
+# =============================================================================
+# STAGING LABELS AND ANNOTATIONS
+# =============================================================================
+# These help identify and organize staging resources
 
-# Common annotations for staging
+# Common labels applied to all staging resources
+commonLabels:
+  environment: staging                         # Environment identifier
+  app.kubernetes.io/instance: staging         # Instance identifier
+
+# Common annotations for staging metadata
 commonAnnotations:
-  platform.aquaculture.com/environment: "staging"
-  platform.aquaculture.com/purpose: "testing"
-  platform.aquaculture.com/cost-center: "development"
+  platform.aquaculture.com/environment: "staging"    # Environment type
+  platform.aquaculture.com/purpose: "testing"       # Purpose of this environment
+  platform.aquaculture.com/cost-center: "development"  # Cost allocation
 
 # Staging-specific image tags (typically latest or development builds)
 images:

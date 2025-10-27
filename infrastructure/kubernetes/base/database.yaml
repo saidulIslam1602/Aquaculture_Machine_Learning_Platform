@@ -1,40 +1,94 @@
-# ============================================================================
-# Base Database Service Configuration
-# ============================================================================
+# =============================================================================
+# DATABASE SERVICE - AQUACULTURE PLATFORM DATA STORAGE
+# =============================================================================
 #
-# This file defines the base PostgreSQL database configuration for the
-# Aquaculture ML Platform. Includes persistent storage, backup configuration,
-# and monitoring setup.
+# WHAT IS THIS FILE?
+# This file defines how to deploy PostgreSQL, the main database that stores
+# all the aquaculture platform data. Think of it as the "memory bank" where
+# all information about fish farms, users, sensors, and predictions is kept.
 #
-# FEATURES:
-# - PostgreSQL 15 with persistent storage  
-# - Automated backup configuration
-# - Connection pooling ready
-# - Performance monitoring
-# - High availability setup
-# - Resource management and limits
-# ============================================================================
+# WHAT DATA DOES THE DATABASE STORE?
+# - User accounts and authentication information
+# - Fish farm details (locations, ponds, equipment)
+# - Sensor data (water temperature, pH, oxygen levels)
+# - Fish health records and medical history
+# - Feeding schedules and nutrition data
+# - ML model predictions and analysis results
+# - System logs and audit trails
+# - Configuration settings and preferences
+#
+# WHY POSTGRESQL?
+# PostgreSQL is a powerful, reliable database that can handle:
+# - Complex queries for data analysis
+# - JSON data for flexible sensor readings
+# - Geographic data for farm locations
+# - Time-series data for historical tracking
+# - ACID compliance for data integrity
+#
+# KEY TECHNICAL FEATURES:
+# - PostgreSQL 15 with latest features and security updates
+# - Persistent storage (data survives pod restarts)
+# - Automated backup and recovery capabilities
+# - Connection pooling for efficient resource usage
+# - Performance monitoring and metrics collection
+# - Resource limits to prevent resource exhaustion
+#
+# STATEFULSET VS DEPLOYMENT:
+# This uses StatefulSet (not Deployment) because databases need:
+# - Stable network identity
+# - Persistent storage that follows the pod
+# - Ordered deployment and scaling
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: apps/v1
-kind: StatefulSet
+# =============================================================================
+# DATABASE STATEFULSET DEFINITION
+# =============================================================================
+
+apiVersion: apps/v1                           # Kubernetes API version for StatefulSets
+kind: StatefulSet                             # Resource type: StatefulSet (for stateful services)
 metadata:
-  name: postgresql
+  name: postgresql                            # Database StatefulSet name
+  
+  # =============================================================================
+  # DATABASE LABELS - IDENTIFICATION AND ORGANIZATION
+  # =============================================================================
+  
   labels:
-    app: postgresql
-    component: database
-    tier: database
-    app.kubernetes.io/name: postgresql
-    app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: aquaculture-platform
+    app: postgresql                                     # Application identifier
+    component: database                                 # Component type (database)
+    tier: database                                     # Application tier (data layer)
+    app.kubernetes.io/name: postgresql                 # Standard Kubernetes app name
+    app.kubernetes.io/component: database              # Standard component label
+    app.kubernetes.io/part-of: aquaculture-platform   # Part of larger platform
+
 spec:
-  serviceName: postgresql
-  replicas: 1  # Single instance for base
+  # =============================================================================
+  # STATEFULSET CONFIGURATION - DATABASE-SPECIFIC SETTINGS
+  # =============================================================================
+  
+  serviceName: postgresql                     # Headless service name for stable network identity
+  replicas: 1                                # Single instance for base (production may use clustering)
+  
+  # =============================================================================
+  # UPDATE STRATEGY - CAREFUL DATABASE UPDATES
+  # =============================================================================
+  # Databases require careful updates to prevent data corruption
+  
   updateStrategy:
-    type: RollingUpdate
+    type: RollingUpdate                       # Update pods one at a time
+  
+  # =============================================================================
+  # POD SELECTOR - WHICH PODS THIS STATEFULSET MANAGES
+  # =============================================================================
+  
   selector:
     matchLabels:
-      app: postgresql
-      component: database
+      app: postgresql                         # Match pods with this app label
+      component: database                     # Match pods with this component label
   template:
     metadata:
       labels:

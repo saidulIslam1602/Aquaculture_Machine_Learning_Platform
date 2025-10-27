@@ -1,62 +1,83 @@
-# Monitoring and Alerting
-# CloudWatch alarms, SNS topics, and monitoring resources
+# =============================================================================
+# MONITORING AND ALERTING SYSTEM
+# =============================================================================
+# This file sets up comprehensive monitoring for all infrastructure components.
+# Monitoring is crucial for maintaining system health and detecting issues early.
+# 
+# Components:
+# - SNS topics for alert notifications (email, SMS, etc.)
+# - CloudWatch alarms for various metrics (CPU, memory, errors, etc.)
+# - Custom dashboards for visualizing system performance
+# - Event rules for security and compliance monitoring
+# 
+# The monitoring system automatically scales with your environment:
+# - Development: Basic monitoring to save costs
+# - Production: Comprehensive monitoring for reliability
 
-# ============================================================================
-# SNS TOPICS FOR ALERTS
-# ============================================================================
+# =============================================================================
+# SNS TOPICS FOR ALERT NOTIFICATIONS
+# =============================================================================
+# SNS (Simple Notification Service) sends alerts to administrators when issues occur
+# Different topics for different severity levels allow appropriate response times
 
 # SNS Topic for Critical Alerts
+# Used for urgent issues that require immediate attention (database down, high error rates)
 resource "aws_sns_topic" "critical_alerts" {
-  count = local.monitoring_enabled ? 1 : 0
+  count = local.monitoring_enabled ? 1 : 0  # Only create if monitoring is enabled
   
-  name = "${local.name_prefix}-critical-alerts"
+  name = "${local.name_prefix}-critical-alerts"  # Topic name in AWS
   
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-critical-alerts"
-    Type = "Monitoring"
+    Name = "${local.name_prefix}-critical-alerts"  # Human-readable name
+    Type = "Monitoring"                            # Resource type for filtering
   })
 }
 
 # SNS Topic for Warning Alerts
+# Used for issues that need attention but aren't immediately critical (high CPU, slow responses)
 resource "aws_sns_topic" "warning_alerts" {
-  count = local.monitoring_enabled ? 1 : 0
+  count = local.monitoring_enabled ? 1 : 0  # Only create if monitoring is enabled
   
-  name = "${local.name_prefix}-warning-alerts"
+  name = "${local.name_prefix}-warning-alerts"  # Topic name in AWS
   
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-warning-alerts"
-    Type = "Monitoring"
+    Name = "${local.name_prefix}-warning-alerts"  # Human-readable name
+    Type = "Monitoring"                           # Resource type for filtering
   })
 }
 
 # Email subscription for critical alerts
+# Automatically sends critical alerts to the owner's email address
 resource "aws_sns_topic_subscription" "critical_email" {
-  count = local.monitoring_enabled && var.owner_email != "" ? 1 : 0
+  count = local.monitoring_enabled && var.owner_email != "" ? 1 : 0  # Only if monitoring enabled and email provided
   
-  topic_arn = aws_sns_topic.critical_alerts[0].arn
-  protocol  = "email"
-  endpoint  = var.owner_email
+  topic_arn = aws_sns_topic.critical_alerts[0].arn  # Subscribe to critical alerts topic
+  protocol  = "email"                               # Send via email
+  endpoint  = var.owner_email                       # Owner's email address
 }
 
-# ============================================================================
+# =============================================================================
 # EKS CLUSTER MONITORING
-# ============================================================================
+# =============================================================================
+# Monitor Kubernetes cluster health and performance
+# High CPU or memory usage can indicate need for scaling or optimization
 
 # EKS Cluster CPU Utilization Alarm
+# Triggers when cluster CPU usage is consistently high
 resource "aws_cloudwatch_metric_alarm" "eks_cpu_high" {
-  count = local.monitoring_enabled ? 1 : 0
+  count = local.monitoring_enabled ? 1 : 0  # Only create if monitoring is enabled
   
-  alarm_name          = "${local.name_prefix}-eks-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EKS"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "80"
+  alarm_name          = "${local.name_prefix}-eks-cpu-high"  # Alarm name in CloudWatch
+  comparison_operator = "GreaterThanThreshold"               # Trigger when metric > threshold
+  evaluation_periods  = "2"                                  # Must be high for 2 periods (10 minutes)
+  metric_name         = "CPUUtilization"                     # AWS metric name
+  namespace           = "AWS/EKS"                            # AWS service namespace
+  period              = "300"                                # 5-minute periods
+  statistic           = "Average"                            # Use average CPU across period
+  threshold           = "80"                                 # Alert when CPU > 80%
   alarm_description   = "This metric monitors EKS cluster CPU utilization"
-  alarm_actions       = [aws_sns_topic.warning_alerts[0].arn]
-  ok_actions          = [aws_sns_topic.warning_alerts[0].arn]
+  alarm_actions       = [aws_sns_topic.warning_alerts[0].arn]  # Send warning alert
+  ok_actions          = [aws_sns_topic.warning_alerts[0].arn]   # Send OK notification when resolved
   
   dimensions = {
     ClusterName = module.eks.cluster_name
@@ -95,33 +116,37 @@ resource "aws_cloudwatch_metric_alarm" "eks_memory_high" {
   })
 }
 
-# ============================================================================
+# =============================================================================
 # RDS DATABASE MONITORING
-# ============================================================================
+# =============================================================================
+# Monitor database performance and health
+# Database issues can cause application failures, so monitoring is critical
 
 # RDS CPU Utilization Alarm
+# High database CPU can indicate slow queries or insufficient instance size
 resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
-  count = local.monitoring_enabled ? 1 : 0
+  count = local.monitoring_enabled ? 1 : 0  # Only create if monitoring is enabled
   
-  alarm_name          = "${local.name_prefix}-rds-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/RDS"
-  period              = "300"
-  statistic           = "Average"
-  threshold           = "80"
+  alarm_name          = "${local.name_prefix}-rds-cpu-high"  # Alarm name in CloudWatch
+  comparison_operator = "GreaterThanThreshold"               # Trigger when metric > threshold
+  evaluation_periods  = "2"                                  # Must be high for 2 periods (10 minutes)
+  metric_name         = "CPUUtilization"                     # AWS RDS metric name
+  namespace           = "AWS/RDS"                            # AWS RDS service namespace
+  period              = "300"                                # 5-minute periods
+  statistic           = "Average"                            # Use average CPU across period
+  threshold           = "80"                                 # Alert when CPU > 80%
   alarm_description   = "This metric monitors RDS CPU utilization"
-  alarm_actions       = [aws_sns_topic.warning_alerts[0].arn]
+  alarm_actions       = [aws_sns_topic.warning_alerts[0].arn]  # Send warning alert
   
+  # Specify which RDS instance to monitor
   dimensions = {
-    DBInstanceIdentifier = module.rds.db_instance_identifier
+    DBInstanceIdentifier = module.rds.db_instance_identifier  # Our PostgreSQL database
   }
   
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-rds-cpu-high"
-    Service = "RDS"
-    Severity = "Warning"
+    Name    = "${local.name_prefix}-rds-cpu-high"  # Human-readable name
+    Service = "RDS"                                # Which service this monitors
+    Severity = "Warning"                           # Alert severity level
   })
 }
 
@@ -435,15 +460,18 @@ resource "aws_cloudwatch_event_target" "guardduty_sns" {
   arn       = aws_sns_topic.critical_alerts[0].arn
 }
 
-# ============================================================================
-# CUSTOM DASHBOARDS
-# ============================================================================
+# =============================================================================
+# CUSTOM DASHBOARDS - VISUAL MONITORING
+# =============================================================================
+# CloudWatch dashboards provide visual monitoring of your infrastructure
+# Dashboards help you quickly understand system health and identify trends
 
 # CloudWatch Dashboard for Infrastructure Overview
+# Provides a single view of key metrics across all infrastructure components
 resource "aws_cloudwatch_dashboard" "infrastructure_overview" {
-  count = local.monitoring_enabled ? 1 : 0
+  count = local.monitoring_enabled ? 1 : 0  # Only create if monitoring is enabled
   
-  dashboard_name = "${local.name_prefix}-infrastructure-overview"
+  dashboard_name = "${local.name_prefix}-infrastructure-overview"  # Dashboard name in CloudWatch
   
   dashboard_body = jsonencode({
     widgets = [

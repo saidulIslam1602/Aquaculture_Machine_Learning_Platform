@@ -1,41 +1,85 @@
-# ============================================================================
-# Base ML Service Deployment
-# ============================================================================
+# =============================================================================
+# ML SERVICE DEPLOYMENT - AQUACULTURE AI/ML INFERENCE ENGINE
+# =============================================================================
 #
-# This file defines the base ML service deployment configuration that
-# provides machine learning inference capabilities for fish classification.
+# WHAT IS THIS FILE?
+# This file defines how to deploy the Machine Learning service that provides
+# AI-powered predictions and insights for fish farming operations. Think of it
+# as the "brain" of the platform that analyzes data and makes smart recommendations.
 #
-# FEATURES:
-# - PyTorch-based ML inference
-# - GPU support (when available)
-# - Model versioning and hot-swapping
-# - Batch processing capabilities
-# - Performance monitoring
-# - Resource-intensive workload optimization
-# ============================================================================
+# WHAT DOES THE ML SERVICE DO?
+# - Fish health analysis: Detects diseases and health issues from images
+# - Growth prediction: Forecasts fish growth rates and optimal harvest times
+# - Feed optimization: Recommends feeding schedules and amounts
+# - Water quality analysis: Predicts optimal environmental conditions
+# - Anomaly detection: Identifies unusual patterns in sensor data
+# - Yield forecasting: Estimates production outcomes
+#
+# KEY TECHNICAL FEATURES:
+# - PyTorch/TensorFlow models for deep learning inference
+# - GPU acceleration support (when available)
+# - Model versioning and hot-swapping (update models without downtime)
+# - Batch processing for efficient resource usage
+# - Real-time and scheduled prediction modes
+# - Performance monitoring and model drift detection
+#
+# RESOURCE CONSIDERATIONS:
+# ML workloads are typically more resource-intensive than regular web services.
+# This service may require more CPU, memory, and potentially GPU resources
+# depending on the complexity of the models being served.
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: apps/v1
-kind: Deployment
+# =============================================================================
+# ML SERVICE DEPLOYMENT DEFINITION
+# =============================================================================
+
+apiVersion: apps/v1                        # Kubernetes API version for deployments
+kind: Deployment                           # Resource type: Deployment
 metadata:
-  name: ml-service
+  name: ml-service                         # ML service deployment name
+  
+  # =============================================================================
+  # ML SERVICE LABELS - IDENTIFICATION AND ORGANIZATION
+  # =============================================================================
+  
   labels:
-    app: ml-service
-    component: ml-inference
-    tier: ml
-    app.kubernetes.io/name: ml-service
-    app.kubernetes.io/component: ml-inference
-    app.kubernetes.io/part-of: aquaculture-platform
+    app: ml-service                                     # Application identifier
+    component: ml-inference                             # Component type (inference engine)
+    tier: ml                                           # Application tier (machine learning)
+    app.kubernetes.io/name: ml-service                 # Standard Kubernetes app name
+    app.kubernetes.io/component: ml-inference          # Standard component label
+    app.kubernetes.io/part-of: aquaculture-platform   # Part of larger platform
+
 spec:
-  replicas: 1  # Base replica count (resource-intensive)
+  # =============================================================================
+  # REPLICA CONFIGURATION - RESOURCE-INTENSIVE SERVICE SCALING
+  # =============================================================================
+  
+  replicas: 1                              # Start with 1 replica (ML workloads are resource-heavy)
+  
+  # =============================================================================
+  # UPDATE STRATEGY - CAREFUL DEPLOYMENT FOR ML MODELS
+  # =============================================================================
+  # ML services need careful updates to avoid model inconsistencies
+  
   strategy:
-    type: RollingUpdate
+    type: RollingUpdate                    # Gradually replace old pods with new ones
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: 1                          # Allow 1 extra pod during updates
+      maxUnavailable: 0                    # Keep at least 1 pod running (no downtime)
+  
+  # =============================================================================
+  # POD SELECTOR - WHICH PODS THIS DEPLOYMENT MANAGES
+  # =============================================================================
+  
   selector:
     matchLabels:
-      app: ml-service
-      component: ml-inference
+      app: ml-service                      # Match pods with this app label
+      component: ml-inference              # Match pods with this component label
   template:
     metadata:
       labels:

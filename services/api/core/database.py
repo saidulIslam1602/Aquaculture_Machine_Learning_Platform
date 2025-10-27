@@ -15,7 +15,14 @@ Architecture:
     - Engine: Database connection pool manager
     - SessionLocal: Session factory for creating DB sessions
     - Base: Declarative base class for all ORM models
-    - get_db: Dependency injection function for FastAPI routes
+    - get_db: Dependency injection function for FastAPI routes. It provides a database session for FastAPI route handlers.
+    - init_db: Initialize database schema. It creates all tables defined in SQLAlchemy models.
+    - Session: SQLAlchemy database session.
+    - SessionLocal: Session factory for creating DB sessions.
+    - Base: Declarative base class for all ORM models.
+    - engine: Database connection pool manager.
+    - settings: Configuration settings.
+    - Generator: Type hint for a generator.
 """
 
 from typing import Generator

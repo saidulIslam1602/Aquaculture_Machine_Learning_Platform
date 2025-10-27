@@ -1,153 +1,211 @@
-# Local Values
-# Define computed values and configurations used throughout the infrastructure
+# =============================================================================
+# LOCAL VALUES AND COMPUTED CONFIGURATIONS
+# =============================================================================
+# This file defines computed values that are calculated from variables and data sources.
+# Locals help avoid repetition and create dynamic configurations based on environment.
+# Think of locals as "calculated variables" that change based on your inputs.
 
 locals {
-  # Common naming convention
+  # =============================================================================
+  # BASIC COMPUTED VALUES
+  # =============================================================================
+  
+  # Common naming convention for all resources
+  # Combines project name and environment (e.g., "aquaculture-ml-production")
   name_prefix = "${var.project_name}-${var.environment}"
   
-  # Account and region information
-  account_id = data.aws_caller_identity.current.account_id
-  region     = data.aws_region.current.name
+  # AWS Account and Region Information
+  # These are fetched dynamically from the current AWS session
+  account_id = data.aws_caller_identity.current.account_id  # Your AWS account ID
+  region     = data.aws_region.current.name                # Current AWS region
   
-  # Availability zones (use first 3 available)
+  # Availability Zones for High Availability
+  # Uses the first 3 available zones in the region for redundancy
+  # Most AWS services require at least 2 AZs, we use 3 for better resilience
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
   
-  # Environment-specific configurations
-        environment_config = {
+  # =============================================================================
+  # ENVIRONMENT-SPECIFIC CONFIGURATIONS
+  # =============================================================================
+  # This map defines different resource sizes and settings for each environment.
+  # This allows the same code to create small dev environments and large prod ones.
+  
+  environment_config = {
           development = {
-            # Development settings
-            eks_node_instance_type = "t3.medium"
-            eks_min_nodes         = 1
-            eks_max_nodes         = 3
-            eks_desired_nodes     = 2
-            rds_instance_class    = "db.t3.micro"
-            redis_node_type       = "cache.t3.micro"
-            kafka_instance_type   = "kafka.t3.small"
-            sqlserver_instance_class = "db.t3.micro"
-            oracle_instance_class = "db.t3.small"
-            enable_multi_az       = false
-            enable_deletion_protection = false
-            log_retention_days    = 7
+            # Development Environment - Optimized for cost, minimal resources
+            # Perfect for testing and development work
+            eks_node_instance_type = "t3.medium"     # Small Kubernetes nodes
+            eks_min_nodes         = 1               # Minimum cluster size
+            eks_max_nodes         = 3               # Maximum cluster size
+            eks_desired_nodes     = 2               # Target cluster size
+            rds_instance_class    = "db.t3.micro"   # Small database instance
+            redis_node_type       = "cache.t3.micro" # Small cache instance
+            kafka_instance_type   = "kafka.t3.small" # Small message broker
+            sqlserver_instance_class = "db.t3.micro" # Small SQL Server
+            oracle_instance_class = "db.t3.small"   # Small Oracle instance
+            enable_multi_az       = false           # Single AZ to save cost
+            enable_deletion_protection = false      # Allow easy cleanup
+            log_retention_days    = 7               # Short log retention
           }
           staging = {
-            # Staging settings
-            eks_node_instance_type = "t3.large"
-            eks_min_nodes         = 2
-            eks_max_nodes         = 6
-            eks_desired_nodes     = 3
-            rds_instance_class    = "db.t3.small"
-            redis_node_type       = "cache.t3.small"
-            kafka_instance_type   = "kafka.t3.small"
-            sqlserver_instance_class = "db.t3.small"
-            oracle_instance_class = "db.t3.medium"
-            enable_multi_az       = true
-            enable_deletion_protection = false
-            log_retention_days    = 30
+            # Staging Environment - Production-like but smaller scale
+            # Used for final testing before production deployment
+            eks_node_instance_type = "t3.large"      # Medium Kubernetes nodes
+            eks_min_nodes         = 2               # Higher minimum for testing
+            eks_max_nodes         = 6               # More capacity for load testing
+            eks_desired_nodes     = 3               # Larger baseline cluster
+            rds_instance_class    = "db.t3.small"   # Medium database instance
+            redis_node_type       = "cache.t3.small" # Medium cache instance
+            kafka_instance_type   = "kafka.t3.small" # Medium message broker
+            sqlserver_instance_class = "db.t3.small" # Medium SQL Server
+            oracle_instance_class = "db.t3.medium"  # Medium Oracle instance
+            enable_multi_az       = true            # High availability testing
+            enable_deletion_protection = false      # Allow cleanup after testing
+            log_retention_days    = 30              # Medium log retention
           }
           production = {
-            # Production settings
-            eks_node_instance_type = "t3.xlarge"
-            eks_min_nodes         = 3
-            eks_max_nodes         = 10
-            eks_desired_nodes     = 5
-            rds_instance_class    = "db.t3.large"
-            redis_node_type       = "cache.t3.medium"
-            kafka_instance_type   = "kafka.m5.large"
-            sqlserver_instance_class = "db.r5.large"
-            oracle_instance_class = "db.r5.xlarge"
-            enable_multi_az       = true
-            enable_deletion_protection = true
-            log_retention_days    = 90
+            # Production Environment - Full scale, high availability, performance optimized
+            # Designed to handle real user traffic and provide business continuity
+            eks_node_instance_type = "t3.xlarge"     # Large Kubernetes nodes for performance
+            eks_min_nodes         = 3               # High minimum for availability
+            eks_max_nodes         = 10              # Large capacity for peak loads
+            eks_desired_nodes     = 5               # Substantial baseline cluster
+            rds_instance_class    = "db.t3.large"   # Large database for performance
+            redis_node_type       = "cache.t3.medium" # Fast cache for low latency
+            kafka_instance_type   = "kafka.m5.large" # High-performance message broker
+            sqlserver_instance_class = "db.r5.large" # Memory-optimized SQL Server
+            oracle_instance_class = "db.r5.xlarge"  # Large Oracle for enterprise workloads
+            enable_multi_az       = true            # Full high availability
+            enable_deletion_protection = true       # Prevent accidental deletion
+            log_retention_days    = 90              # Long log retention for compliance
           }
         }
   
-  # Current environment configuration
+  # =============================================================================
+  # ACTIVE CONFIGURATION SELECTION
+  # =============================================================================
+  # Selects the configuration for the current environment
+  # This is how the same code adapts to different environment needs
   config = local.environment_config[var.environment]
   
-  # Common tags applied to all resources
+  # =============================================================================
+  # RESOURCE TAGGING STRATEGY
+  # =============================================================================
+  # Common tags applied to all AWS resources for organization and cost tracking
+  # Tags help you understand what resources belong to what project and who owns them
   common_tags = merge(var.additional_tags, {
-    Project      = var.project_name
-    Environment  = var.environment
-    ManagedBy    = "Terraform"
-    Owner        = var.owner_email
-    CreatedAt    = timestamp()
-    AccountId    = local.account_id
-    Region       = local.region
+    Project      = var.project_name          # Which project this belongs to
+    Environment  = var.environment           # Which environment (dev/staging/prod)
+    ManagedBy    = "Terraform"               # How this resource was created
+    Owner        = var.owner_email           # Who is responsible for this resource
+    CreatedAt    = timestamp()               # When this resource was created
+    AccountId    = local.account_id          # Which AWS account owns this
+    Region       = local.region              # Which AWS region this is in
   })
   
-  # Network CIDR calculations
-  vpc_cidr = var.vpc_cidr
+  # =============================================================================
+  # NETWORK IP ADDRESS CALCULATIONS
+  # =============================================================================
+  # Automatically calculates subnet IP ranges from the main VPC CIDR block
+  # This ensures subnets don't overlap and are properly distributed across AZs
   
-  # Calculate subnet CIDRs automatically if not provided
+  vpc_cidr = var.vpc_cidr  # Main VPC IP range (e.g., 10.0.0.0/16)
+  
+  # Public Subnets (for load balancers, NAT gateways)
+  # These subnets have internet access and are where public-facing resources go
+  # IP range: 10.0.100.0/24, 10.0.101.0/24, 10.0.102.0/24
   public_subnet_cidrs = length(var.public_subnet_cidrs) > 0 ? var.public_subnet_cidrs : [
     for i in range(length(local.azs)) : cidrsubnet(local.vpc_cidr, 8, i + 100)
   ]
   
+  # Private Subnets (for applications, Kubernetes nodes)
+  # These subnets have no direct internet access, only through NAT gateways
+  # IP range: 10.0.0.0/24, 10.0.1.0/24, 10.0.2.0/24
   private_subnet_cidrs = length(var.private_subnet_cidrs) > 0 ? var.private_subnet_cidrs : [
     for i in range(length(local.azs)) : cidrsubnet(local.vpc_cidr, 8, i)
   ]
   
+  # Database Subnets (for RDS, ElastiCache)
+  # Isolated subnets for databases with no internet access at all
+  # IP range: 10.0.200.0/24, 10.0.201.0/24, 10.0.202.0/24
   database_subnet_cidrs = [
     for i in range(length(local.azs)) : cidrsubnet(local.vpc_cidr, 8, i + 200)
   ]
   
-  # Security group rules for different services
+  # =============================================================================
+  # SECURITY GROUP RULES TEMPLATES
+  # =============================================================================
+  # Pre-defined security rules for common web services
+  # These rules allow HTTP and HTTPS traffic from anywhere on the internet
   web_ingress_rules = [
     {
-      description = "HTTP"
-      from_port   = 80
+      description = "HTTP"                    # Standard web traffic
+      from_port   = 80                       # HTTP port
       to_port     = 80
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+      protocol    = "tcp"                    # TCP protocol
+      cidr_blocks = ["0.0.0.0/0"]           # Allow from anywhere
     },
     {
-      description = "HTTPS"
-      from_port   = 443
+      description = "HTTPS"                  # Secure web traffic
+      from_port   = 443                     # HTTPS port
       to_port     = 443
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
+      protocol    = "tcp"                   # TCP protocol
+      cidr_blocks = ["0.0.0.0/0"]          # Allow from anywhere
     }
   ]
   
-  # Monitoring configuration
+  # =============================================================================
+  # MONITORING AND BACKUP CONFIGURATIONS
+  # =============================================================================
+  # Dynamic settings that change based on environment importance
+  
+  # Monitoring is always enabled for production, optional for other environments
   monitoring_enabled = var.environment == "production" ? true : var.enable_monitoring
+  
+  # Log retention: Production keeps logs longer for compliance and troubleshooting
   log_retention_days = var.environment == "production" ? 90 : 30
   
-  # Backup configuration
+  # Backup retention: Production keeps backups longer for data protection
   backup_retention_period = var.environment == "production" ? 30 : 7
   
-  # KMS key policies
+  # =============================================================================
+  # KMS ENCRYPTION KEY POLICY
+  # =============================================================================
+  # Defines who can use the encryption keys for securing data at rest
+  # This policy allows AWS services to encrypt/decrypt data automatically
   kms_key_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17"  # AWS policy language version
     Statement = [
       {
+        # Allow full administrative access to the AWS account owner
         Sid    = "Enable IAM User Permissions"
         Effect = "Allow"
         Principal = {
-          AWS = "arn:aws:iam::${local.account_id}:root"
+          AWS = "arn:aws:iam::${local.account_id}:root"  # Account root user
         }
-        Action   = "kms:*"
-        Resource = "*"
+        Action   = "kms:*"      # All KMS actions
+        Resource = "*"          # All resources
       },
       {
+        # Allow AWS services to use the key for encryption/decryption
         Sid    = "Allow use of the key for encryption/decryption"
         Effect = "Allow"
         Principal = {
           Service = [
-            "rds.amazonaws.com",
-            "elasticache.amazonaws.com",
-            "kafka.amazonaws.com",
-            "s3.amazonaws.com"
+            "rds.amazonaws.com",        # For database encryption
+            "elasticache.amazonaws.com", # For cache encryption
+            "kafka.amazonaws.com",      # For message encryption
+            "s3.amazonaws.com"          # For file encryption
           ]
         }
         Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey"
+          "kms:Encrypt",           # Encrypt data
+          "kms:Decrypt",           # Decrypt data
+          "kms:ReEncrypt*",        # Re-encrypt with different key
+          "kms:GenerateDataKey*",  # Generate encryption keys
+          "kms:DescribeKey"        # Get key information
         ]
-        Resource = "*"
+        Resource = "*"  # Apply to all resources
       }
     ]
   })

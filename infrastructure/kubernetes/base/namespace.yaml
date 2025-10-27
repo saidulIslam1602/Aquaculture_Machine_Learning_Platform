@@ -1,27 +1,60 @@
-# ============================================================================
-# Base Namespace Configuration
-# ============================================================================
+# =============================================================================
+# KUBERNETES NAMESPACE - AQUACULTURE ML PLATFORM
+# =============================================================================
 #
-# This file defines the base namespace configuration that will be customized
-# for different environments (staging, production) using Kustomize overlays.
+# WHAT IS THIS FILE?
+# This file creates a Kubernetes namespace, which is like a virtual cluster
+# within the physical cluster. Think of it as creating a separate "room"
+# where all the aquaculture platform components will live.
 #
-# FEATURES:
-# - Common labels and annotations
-# - Network policies preparation
-# - Resource quotas and limits (to be overlaid)
-# - Environment-agnostic configuration
-# ============================================================================
+# WHAT IS A NAMESPACE?
+# A namespace is like a folder that groups related applications together.
+# It provides isolation, so the aquaculture platform won't interfere with
+# other applications running on the same Kubernetes cluster.
+#
+# WHY USE NAMESPACES?
+# - Organization: Keep all aquaculture components together
+# - Security: Control who can access what resources
+# - Resource Management: Set limits on CPU, memory, storage
+# - Environment Separation: Different namespaces for staging/production
+#
+# HOW KUSTOMIZE WORKS WITH THIS FILE:
+# This is the "base" configuration that gets customized for different
+# environments. Kustomize overlays will modify this for staging/production
+# by adding environment-specific labels, resource quotas, and policies.
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: v1
-kind: Namespace
+# =============================================================================
+# NAMESPACE DEFINITION
+# =============================================================================
+# Creates the actual namespace resource in Kubernetes
+
+apiVersion: v1                          # Kubernetes API version for namespaces
+kind: Namespace                         # Resource type: Namespace
 metadata:
-  name: aquaculture
+  name: aquaculture                     # Namespace name (must be unique in cluster)
+  
+  # =============================================================================
+  # LABELS - METADATA FOR ORGANIZATION AND SELECTION
+  # =============================================================================
+  # Labels help organize and select resources. They're like tags on files.
+  
   labels:
-    name: aquaculture
-    app.kubernetes.io/name: aquaculture-platform
-    app.kubernetes.io/part-of: aquaculture-ml-platform
-    app.kubernetes.io/managed-by: kustomize
+    name: aquaculture                                    # Simple name label
+    app.kubernetes.io/name: aquaculture-platform        # Standard Kubernetes app name
+    app.kubernetes.io/part-of: aquaculture-ml-platform  # Part of larger system
+    app.kubernetes.io/managed-by: kustomize             # Managed by Kustomize tool
+  
+  # =============================================================================
+  # ANNOTATIONS - ADDITIONAL METADATA FOR DOCUMENTATION
+  # =============================================================================
+  # Annotations store extra information that tools and humans can read
+  
   annotations:
-    description: "Aquaculture ML Platform namespace"
-    contact: "platform-team@aquaculture.com"
-    documentation: "https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform"
+    description: "Aquaculture ML Platform namespace"                                           # What this namespace is for
+    contact: "platform-team@aquaculture.com"                                                  # Who to contact for issues
+    documentation: "https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform" # Where to find documentation

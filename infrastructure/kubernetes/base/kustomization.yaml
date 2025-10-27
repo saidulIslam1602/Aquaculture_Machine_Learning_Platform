@@ -1,84 +1,142 @@
-# ============================================================================
-# Base Kustomization Configuration
-# ============================================================================
+# =============================================================================
+# KUSTOMIZE BASE CONFIGURATION - AQUACULTURE ML PLATFORM
+# =============================================================================
 #
-# This kustomization.yaml file defines the base Kubernetes resources for the
-# Aquaculture ML Platform. It includes all core services, configurations,
-# and common labels that will be inherited by environment-specific overlays.
+# WHAT IS THIS FILE?
+# This is the main Kustomize configuration that defines all the base Kubernetes
+# resources for the aquaculture platform. Think of it as a "recipe" that lists
+# all the ingredients (services) needed to run the platform.
 #
-# ARCHITECTURE:
-# - API Service: FastAPI backend with authentication and core business logic
-# - ML Service: TensorFlow Serving for model inference and predictions  
-# - Worker Service: Celery workers for background task processing
-# - Database: PostgreSQL with monitoring and persistence
-# - Cache: Redis for session storage and message brokering
-# - Monitoring: Prometheus exporters and health checks
-# ============================================================================
+# WHAT IS KUSTOMIZE?
+# Kustomize is a tool that helps manage Kubernetes configurations across
+# different environments (development, staging, production). It works like
+# a template system where this "base" configuration gets customized for
+# each environment without duplicating code.
+#
+# HOW IT WORKS:
+# 1. This base defines common resources and settings
+# 2. Environment overlays (staging/production) modify these base settings
+# 3. Kustomize combines base + overlay to create final Kubernetes manifests
+# 4. The result is deployed to the specific environment
+#
+# PLATFORM ARCHITECTURE:
+# - API Service: Main backend handling user requests and business logic
+# - ML Service: Machine learning inference for fish health predictions
+# - Worker Service: Background tasks (data processing, notifications)
+# - Database: PostgreSQL for storing all application data
+# - Redis Cache: Fast storage for sessions and temporary data
+# - Monitoring: Health checks and metrics collection
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
+# =============================================================================
+# KUSTOMIZE RESOURCE DEFINITION
+# =============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1    # Kustomize API version
+kind: Kustomization                            # Resource type: Kustomization
 
 metadata:
-  name: aquaculture-platform-base
+  name: aquaculture-platform-base             # Name of this kustomization
   annotations:
-    config.kubernetes.io/local-config: "true"
+    config.kubernetes.io/local-config: "true" # Mark as local config (not deployed)
 
-# Base resources that define the core platform components
+# =============================================================================
+# BASE RESOURCES - CORE PLATFORM COMPONENTS
+# =============================================================================
+# List of YAML files that define the platform services
+# These files contain the actual Kubernetes resources (Deployments, Services, etc.)
+
 resources:
-- namespace.yaml
-- api-service.yaml
-- ml-service.yaml
-- worker-service.yaml
-- database.yaml
-- redis.yaml
+- namespace.yaml        # Creates the namespace for all platform components
+- api-service.yaml      # Main backend API service deployment and service
+- ml-service.yaml       # Machine learning inference service
+- worker-service.yaml   # Background task processing service
+- database.yaml         # PostgreSQL database deployment and service
+- redis.yaml           # Redis cache deployment and service
 
-# Common labels applied to all resources
+# =============================================================================
+# COMMON LABELS - APPLIED TO ALL RESOURCES
+# =============================================================================
+# These labels are automatically added to every resource defined above
+# They help with organization, monitoring, and resource selection
+
 commonLabels:
-  app.kubernetes.io/name: aquaculture-platform
-  app.kubernetes.io/instance: base
-  app.kubernetes.io/version: "1.0.0"
-  app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/name: aquaculture-platform      # Application name
+  app.kubernetes.io/instance: base                   # Instance identifier
+  app.kubernetes.io/version: "1.0.0"                # Application version
+  app.kubernetes.io/managed-by: kustomize           # Management tool
 
-# Common annotations applied to all resources
+# =============================================================================
+# COMMON ANNOTATIONS - METADATA FOR ALL RESOURCES
+# =============================================================================
+# Annotations provide additional metadata that tools and operators can use
+
 commonAnnotations:
-  platform.aquaculture.com/version: "1.0.0"
-  platform.aquaculture.com/release: "neptune"
-  platform.aquaculture.com/component: "base"
+  platform.aquaculture.com/version: "1.0.0"        # Platform version
+  platform.aquaculture.com/release: "neptune"      # Release codename
+  platform.aquaculture.com/component: "base"       # Component type
 
-# Name prefix for all resources (can be overridden in overlays)
+# =============================================================================
+# RESOURCE NAMING AND ORGANIZATION
+# =============================================================================
+
+# Name prefix for all resources (empty in base, can be overridden in overlays)
 namePrefix: ""
 
-# Namespace for all resources (can be overridden in overlays)  
+# Namespace where all resources will be deployed
 namespace: aquaculture-platform
 
-# Images that can be updated across environments
+# =============================================================================
+# CONTAINER IMAGES - VERSION MANAGEMENT
+# =============================================================================
+# Define which container image versions to use for each service
+# Overlays can override these for different environments
+
 images:
-- name: aquaculture/api
-  newTag: "1.0.0"
-- name: aquaculture/ml-service  
-  newTag: "1.0.0"
-- name: aquaculture/worker
-  newTag: "1.0.0"
+- name: aquaculture/api           # API service container image
+  newTag: "1.0.0"                 # Version tag
+- name: aquaculture/ml-service    # ML service container image
+  newTag: "1.0.0"                 # Version tag
+- name: aquaculture/worker        # Worker service container image
+  newTag: "1.0.0"                 # Version tag
 
-# Resource transformations
+# =============================================================================
+# REPLICA COUNTS - SERVICE SCALING
+# =============================================================================
+# Define how many copies of each service to run
+# Production overlays will typically increase these numbers
+
 replicas:
-- name: api-service
-  count: 2
-- name: ml-service
-  count: 1
-- name: worker-service
-  count: 2
+- name: api-service               # API service scaling
+  count: 2                        # Run 2 copies for high availability
+- name: ml-service                # ML service scaling
+  count: 1                        # Run 1 copy (can be increased for load)
+- name: worker-service            # Worker service scaling
+  count: 2                        # Run 2 copies for task processing
 
-# Configuration and secret generators (to be defined in overlays)
-configMapGenerator: []
-secretGenerator: []
+# =============================================================================
+# GENERATORS AND PATCHES
+# =============================================================================
+# These are typically defined in environment-specific overlays
 
-# Patches that can be applied (typically used in overlays)
-patches: []
+# Configuration and secret generators (defined in overlays for security)
+configMapGenerator: []            # No config maps in base (overlays will add)
+secretGenerator: []               # No secrets in base (overlays will add)
 
-# Additional metadata
+# Patches for environment-specific modifications
+patches: []                       # No patches in base (overlays will add)
+
+# =============================================================================
+# ADDITIONAL LABELS
+# =============================================================================
+# Extra labels applied to resources with selectors
+
 labels:
-- includeSelectors: true
+- includeSelectors: true          # Apply to resources that use selectors
   pairs:
-    tier: backend
-    environment: base
+    tier: backend                 # Mark as backend tier
+    environment: base             # Mark as base configuration

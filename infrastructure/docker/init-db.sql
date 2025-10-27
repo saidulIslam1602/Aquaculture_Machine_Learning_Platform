@@ -1,20 +1,62 @@
--- Initialize Aquaculture Database
+-- =============================================================================
+-- AQUACULTURE DATABASE INITIALIZATION - POSTGRESQL SETUP SCRIPT
+-- =============================================================================
+--
+-- WHAT IS THIS FILE?
+-- This SQL script sets up the initial database structure for the aquaculture
+-- platform. Think of it as the "blueprint" that creates all the tables and
+-- relationships needed to store fish farming data.
+--
+-- WHAT DOES THIS SCRIPT DO?
+-- - Creates database extensions for advanced features
+-- - Sets up tables for users, fish farms, ponds, and sensors
+-- - Defines relationships between different data entities
+-- - Creates indexes for fast data retrieval
+-- - Inserts initial sample data for testing
+--
+-- WHEN IS THIS SCRIPT RUN?
+-- This script runs automatically when the PostgreSQL database container
+-- starts for the first time. It only runs once to set up the initial
+-- database structure.
+--
+-- KEY DATABASE CONCEPTS:
+-- - Tables: Store different types of data (users, farms, fish, sensors)
+-- - Relationships: Connect related data (farms have ponds, ponds have fish)
+-- - Indexes: Speed up data searches and queries
+-- - Extensions: Add advanced PostgreSQL features
+-- - Constraints: Ensure data quality and consistency
+--
+-- AUTHOR: DevOps Team
+-- VERSION: 1.0.0
+-- UPDATED: 2024-10-26
+-- =============================================================================
 
--- Create extensions
+-- =============================================================================
+-- DATABASE EXTENSIONS - ADVANCED POSTGRESQL FEATURES
+-- =============================================================================
+-- Enable PostgreSQL extensions that provide additional functionality
+
+-- UUID Extension: Generate unique identifiers for records
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Trigram Extension: Enable fuzzy text searching (find similar names)
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";
 
--- Create users table
+-- =============================================================================
+-- USER MANAGEMENT TABLES - AUTHENTICATION AND AUTHORIZATION
+-- =============================================================================
+
+-- Users Table: Store user accounts and authentication information
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email VARCHAR(255) UNIQUE NOT NULL,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    hashed_password VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255),
-    is_active BOOLEAN DEFAULT TRUE,
-    is_superuser BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),    -- Unique user identifier
+    email VARCHAR(255) UNIQUE NOT NULL,                 -- User email (must be unique)
+    username VARCHAR(100) UNIQUE NOT NULL,              -- Username for login
+    hashed_password VARCHAR(255) NOT NULL,              -- Encrypted password (never store plain text)
+    full_name VARCHAR(255),                             -- User's full name
+    is_active BOOLEAN DEFAULT TRUE,                     -- Account active status
+    is_superuser BOOLEAN DEFAULT FALSE,                 -- Admin privileges flag
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,  -- Account creation time
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP   -- Last update time
 );
 
 -- Create fish_species table

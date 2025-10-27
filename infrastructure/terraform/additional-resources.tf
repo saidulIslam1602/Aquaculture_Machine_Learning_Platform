@@ -1,41 +1,62 @@
-# Additional Resources
-# Resources that were referenced but not defined in main.tf
+# =============================================================================
+# ADDITIONAL SUPPORTING RESOURCES
+# =============================================================================
+# This file contains supporting resources that are referenced in main.tf but defined separately
+# for better organization. These resources support the core infrastructure components.
+# 
+# Contents:
+# - Subnet groups for databases and caches
+# - KMS encryption keys for data security
+# - CloudWatch log groups for monitoring
+# - Application Load Balancer and S3 buckets
+# - Enterprise security features (WAF, GuardDuty, etc.)
+# - Container registries (ECR) for Docker images
+# - Compliance and governance tools
 
-# ============================================================================
-# SUBNET GROUPS
-# ============================================================================
+# =============================================================================
+# SUBNET GROUPS - NETWORK ORGANIZATION
+# =============================================================================
+# Subnet groups define which subnets databases and caches can use
+# They ensure resources are deployed in the correct network segments
 
 # ElastiCache Subnet Group for Redis
+# Defines which subnets Redis can be deployed in (private subnets for security)
 resource "aws_elasticache_subnet_group" "redis" {
-  name       = "${local.name_prefix}-redis-subnet-group"
-  subnet_ids = module.vpc.private_subnets
+  name       = "${local.name_prefix}-redis-subnet-group"  # Subnet group identifier
+  subnet_ids = module.vpc.private_subnets                 # Use private subnets (no direct internet access)
   
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-redis-subnet-group"
-    Type = "SubnetGroup"
+    Name = "${local.name_prefix}-redis-subnet-group"  # Human-readable name
+    Type = "SubnetGroup"                              # Resource type for filtering
   })
 }
 
-# ============================================================================
-# KMS KEYS
-# ============================================================================
+# =============================================================================
+# KMS ENCRYPTION KEYS - DATA SECURITY
+# =============================================================================
+# KMS (Key Management Service) keys encrypt data at rest for security compliance
+# Each service gets its own key for better security isolation and key rotation
 
 # KMS Key for Kafka Encryption
+# Encrypts Kafka message data stored on disk
 resource "aws_kms_key" "kafka" {
   description             = "KMS key for Kafka encryption in ${var.environment}"
+  # Deletion window: Production gets 30 days (safety), others get 7 days (faster cleanup)
   deletion_window_in_days = var.environment == "production" ? 30 : 7
   
-  policy = local.kms_key_policy
+  policy = local.kms_key_policy  # Key usage policy defined in locals.tf
   
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-kafka-kms"
-    Service = "Kafka"
+    Name    = "${local.name_prefix}-kafka-kms"  # Human-readable name
+    Service = "Kafka"                          # Which service uses this key
   })
 }
 
+# Create a human-readable alias for the Kafka KMS key
+# Aliases make it easier to reference keys in applications and other services
 resource "aws_kms_alias" "kafka" {
-  name          = "alias/${local.name_prefix}-kafka"
-  target_key_id = aws_kms_key.kafka.key_id
+  name          = "alias/${local.name_prefix}-kafka"  # Alias name (must start with 'alias/')
+  target_key_id = aws_kms_key.kafka.key_id           # Points to the actual KMS key
 }
 
 # KMS Key for RDS Encryption
@@ -74,19 +95,22 @@ resource "aws_kms_alias" "s3" {
   target_key_id = aws_kms_key.s3.key_id
 }
 
-# ============================================================================
-# CLOUDWATCH LOG GROUPS
-# ============================================================================
+# =============================================================================
+# CLOUDWATCH LOG GROUPS - CENTRALIZED LOGGING
+# =============================================================================
+# CloudWatch log groups collect and store logs from various AWS services
+# Logs are essential for troubleshooting, monitoring, and security analysis
 
 # CloudWatch Log Group for Kafka
+# Collects Kafka broker logs for monitoring and troubleshooting
 resource "aws_cloudwatch_log_group" "kafka" {
-  name              = "/aws/msk/${local.name_prefix}-kafka"
-  retention_in_days = local.log_retention_days
-  kms_key_id        = aws_kms_key.s3.arn
+  name              = "/aws/msk/${local.name_prefix}-kafka"  # Log group name (follows AWS naming convention)
+  retention_in_days = local.log_retention_days               # How long to keep logs (varies by environment)
+  kms_key_id        = aws_kms_key.s3.arn                    # Encrypt logs at rest for security
   
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-kafka-logs"
-    Service = "Kafka"
+    Name    = "${local.name_prefix}-kafka-logs"  # Human-readable name
+    Service = "Kafka"                           # Which service generates these logs
   })
 }
 
@@ -114,29 +138,34 @@ resource "aws_cloudwatch_log_group" "ml_service" {
   })
 }
 
-# ============================================================================
-# APPLICATION LOAD BALANCER
-# ============================================================================
+# =============================================================================
+# APPLICATION LOAD BALANCER - TRAFFIC DISTRIBUTION
+# =============================================================================
+# The ALB distributes incoming internet traffic across multiple application instances
+# It provides high availability, SSL termination, and health checking
 
 # Application Load Balancer
 resource "aws_lb" "main" {
-  name               = "${local.name_prefix}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb.id]
-  subnets            = module.vpc.public_subnets
+  name               = "${local.name_prefix}-alb"      # ALB name in AWS
+  internal           = false                           # Internet-facing (not internal)
+  load_balancer_type = "application"                   # Layer 7 load balancer (HTTP/HTTPS)
+  security_groups    = [aws_security_group.alb.id]    # Apply ALB security group
+  subnets            = module.vpc.public_subnets       # Deploy in public subnets for internet access
   
+  # Prevent accidental deletion in production environments
   enable_deletion_protection = local.config.enable_deletion_protection
   
+  # Access Logging Configuration
+  # Logs all requests for security analysis and troubleshooting
   access_logs {
-    bucket  = aws_s3_bucket.alb_logs.id
-    prefix  = "alb-logs"
-    enabled = true
+    bucket  = aws_s3_bucket.alb_logs.id  # S3 bucket to store access logs
+    prefix  = "alb-logs"                 # Prefix for log files
+    enabled = true                       # Enable access logging
   }
   
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-alb"
-    Type = "LoadBalancer"
+    Name = "${local.name_prefix}-alb"  # Human-readable name
+    Type = "LoadBalancer"              # Resource type for filtering
   })
 }
 
@@ -196,19 +225,24 @@ resource "random_string" "bucket_suffix" {
   upper   = false
 }
 
-# ============================================================================
-# ENTERPRISE SECURITY SERVICES
-# ============================================================================
+# =============================================================================
+# ENTERPRISE SECURITY SERVICES (OPTIONAL)
+# =============================================================================
+# Advanced security features for enterprise environments
+# These services provide additional protection against threats and attacks
+# Only created when var.enable_enterprise_security is true
 
-# AWS WAF for Application Security
+# AWS WAF (Web Application Firewall) for Application Security
+# Protects web applications from common attacks like SQL injection and XSS
 resource "aws_wafv2_web_acl" "main" {
-  count = var.enable_enterprise_security ? 1 : 0
+  count = var.enable_enterprise_security ? 1 : 0  # Only create if enterprise security enabled
   
-  name  = "${local.name_prefix}-waf"
-  scope = "REGIONAL"
+  name  = "${local.name_prefix}-waf"  # WAF name in AWS
+  scope = "REGIONAL"                  # Regional WAF (for ALB, not CloudFront)
   
+  # Default action when no rules match - allow traffic through
   default_action {
-    allow {}
+    allow {}  # Allow traffic by default (rules will block specific threats)
   }
   
   # Rate limiting rule
@@ -565,29 +599,35 @@ resource "aws_cloudwatch_log_group" "security_events" {
   })
 }
 
-# ============================================================================
-# ECR REPOSITORIES
-# ============================================================================
+# =============================================================================
+# ECR REPOSITORIES - CONTAINER IMAGE STORAGE
+# =============================================================================
+# Elastic Container Registry (ECR) stores Docker images for your applications
+# Each service gets its own repository for better organization and security
+# Images are automatically scanned for security vulnerabilities
 
 # ECR Repository for API Service
+# Stores Docker images for the main API application
 resource "aws_ecr_repository" "api" {
-  count = var.create_ecr_repositories ? 1 : 0
+  count = var.create_ecr_repositories ? 1 : 0  # Only create if ECR repositories enabled
   
-  name                 = "${var.project_name}/api"
-  image_tag_mutability = "MUTABLE"
+  name                 = "${var.project_name}/api"  # Repository name (project/service format)
+  image_tag_mutability = "MUTABLE"                  # Allow overwriting image tags (useful for dev)
   
+  # Security Configuration
   image_scanning_configuration {
-    scan_on_push = true
+    scan_on_push = true  # Automatically scan images for vulnerabilities when pushed
   }
   
+  # Encryption Configuration
   encryption_configuration {
-    encryption_type = "KMS"
-    kms_key         = aws_kms_key.s3.arn
+    encryption_type = "KMS"              # Use KMS encryption for stored images
+    kms_key         = aws_kms_key.s3.arn # Use our custom KMS key
   }
   
   tags = merge(local.common_tags, {
-    Name    = "${local.name_prefix}-api-ecr"
-    Service = "API"
+    Name    = "${local.name_prefix}-api-ecr"  # Human-readable name
+    Service = "API"                           # Which service uses this repository
   })
 }
 

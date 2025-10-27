@@ -1,32 +1,48 @@
-# ============================================================================
-# ENTERPRISE DOCKERFILE FOR AQUACULTURE ML PLATFORM API SERVICE
-# ============================================================================
+# =============================================================================
+# ENTERPRISE API SERVICE DOCKERFILE - AQUACULTURE PLATFORM ENTERPRISE EDITION
+# =============================================================================
 #
-# This Dockerfile creates an enterprise-grade container for the API service with:
-# - Multi-stage build for security and size optimization
-# - Enterprise application server (Gunicorn) with production configuration
-# - Enterprise security hardening and compliance features
-# - Multi-database support (PostgreSQL + SQL Server)
-# - Enterprise monitoring and logging integration
-# - SSL/TLS support for secure communications
-# - LDAP and enterprise authentication integration
-# - Compliance and audit logging capabilities
+# WHAT IS THIS FILE?
+# This Dockerfile creates an enterprise-grade container for the API service
+# that meets strict corporate requirements for security, compliance, and
+# scalability. Think of it as the "premium version" of the API service
+# designed for large organizations and regulated industries.
 #
-# SECURITY FEATURES:
-# - Non-root user execution
-# - Minimal attack surface with distroless base
-# - Security scanning integration
+# WHAT MAKES THIS "ENTERPRISE"?
+# Enterprise environments have stricter requirements than standard deployments:
+# - Compliance: Must meet SOX, GDPR, PCI, and other regulatory standards
+# - Security: Enhanced security features and vulnerability scanning
+# - Scalability: High-performance application server (Gunicorn)
+# - Monitoring: Advanced observability and audit logging
+# - Integration: Support for enterprise systems (LDAP, SQL Server, SAML)
+# - Reliability: Production-grade configuration and health checks
+#
+# KEY ENTERPRISE FEATURES:
+# - Multi-Database Support: PostgreSQL + SQL Server for legacy systems
+# - Enterprise Authentication: LDAP, Active Directory, SAML integration
+# - Advanced Security: SSL/TLS, certificate management, security scanning
+# - Compliance Logging: Detailed audit trails for regulatory requirements
+# - Performance Monitoring: Prometheus metrics and OpenTelemetry tracing
+# - High Availability: Gunicorn with multiple worker processes
+# - Structured Logging: JSON format for enterprise log aggregation systems
+#
+# SECURITY ENHANCEMENTS:
+# - Hardened container with minimal attack surface
+# - Non-root user execution with specific enterprise user
 # - Enterprise SSL certificate management
-# - Secure secrets handling
+# - Security vulnerability scanning integration
+# - Secure secrets handling and encryption
 #
-# ENTERPRISE FEATURES:
-# - Gunicorn WSGI server with enterprise configuration
-# - Multi-database connection pooling
-# - Enterprise monitoring integration (Prometheus, APM)
-# - Structured JSON logging for enterprise log aggregation
-# - Health checks and readiness probes
-# - Graceful shutdown handling
-# ============================================================================
+# COMPLIANCE FEATURES:
+# - SOX (Sarbanes-Oxley) compliance for financial regulations
+# - GDPR compliance for data protection
+# - Audit logging for all user actions and system events
+# - Data retention and privacy controls
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 # ============================================================================
 # STAGE 1: Enterprise Build Environment

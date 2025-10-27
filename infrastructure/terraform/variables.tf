@@ -1,67 +1,97 @@
-# Terraform Variables
-# Define all configurable parameters with validation and descriptions
+# =============================================================================
+# TERRAFORM INPUT VARIABLES
+# =============================================================================
+# This file defines all configurable parameters for the infrastructure.
+# Variables allow customization without modifying the main configuration files.
+# Each variable includes validation rules to prevent configuration errors.
 
-# ============================================================================
-# BASIC CONFIGURATION
-# ============================================================================
+# =============================================================================
+# BASIC CONFIGURATION VARIABLES
+# =============================================================================
+# These variables control the fundamental aspects of your infrastructure deployment
 
+# AWS Region Selection
+# Determines where all your infrastructure will be deployed
+# Different regions have different costs, latency, and compliance requirements
 variable "aws_region" {
   description = "AWS region for deploying resources"
   type        = string
-  default     = "us-east-1"
+  default     = "us-east-1"  # Virginia region - typically lowest cost
   
+  # Validation ensures the region format is correct (e.g., us-east-1, eu-west-1)
   validation {
     condition     = can(regex("^[a-z]{2}-[a-z]+-[0-9]$", var.aws_region))
     error_message = "AWS region must be in format: us-east-1, eu-west-1, etc."
   }
 }
 
+# Environment Configuration
+# Controls resource sizing, costs, and features based on deployment stage
+# - development: Smaller, cheaper resources for testing
+# - staging: Medium resources for pre-production testing  
+# - production: Full-scale, highly available resources
 variable "environment" {
   description = "Environment name (development, staging, production)"
   type        = string
   default     = "production"
   
+  # Only allow specific environment names to prevent typos and ensure consistency
   validation {
     condition     = contains(["development", "staging", "production"], var.environment)
     error_message = "Environment must be development, staging, or production."
   }
 }
 
+# Project Name for Resource Identification
+# Used as a prefix for all AWS resource names to keep them organized
+# Also used for cost tracking and resource grouping via tags
 variable "project_name" {
   description = "Project name for resource naming and tagging"
   type        = string
   default     = "aquaculture-ml"
   
+  # Ensure project name follows AWS naming conventions (lowercase, no spaces)
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$", var.project_name))
     error_message = "Project name must start with letter, contain only lowercase letters, numbers, and hyphens, and end with alphanumeric character."
   }
   
+  # Prevent names that are too short or too long for AWS resource limits
   validation {
     condition     = length(var.project_name) >= 3 && length(var.project_name) <= 50
     error_message = "Project name must be between 3 and 50 characters."
   }
 }
 
+# Owner Email for Notifications and Accountability
+# Used for sending alerts when infrastructure issues occur
+# Also tagged on all resources for cost tracking and ownership identification
 variable "owner_email" {
   description = "Owner email address for resource tagging and notifications"
   type        = string
   
+  # Validate email format to ensure alerts can be delivered successfully
   validation {
     condition     = can(regex("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", var.owner_email))
     error_message = "Owner email must be a valid email address."
   }
 }
 
-# ============================================================================
-# NETWORKING CONFIGURATION
-# ============================================================================
+# =============================================================================
+# NETWORKING CONFIGURATION VARIABLES
+# =============================================================================
+# These variables control the network setup including VPC, subnets, and IP ranges
+# Proper network design is crucial for security and performance
 
+# VPC IP Address Range
+# Defines the private IP address space for your entire network (65,536 addresses)
+# 10.0.0.0/16 provides addresses from 10.0.0.1 to 10.0.255.254
 variable "vpc_cidr" {
   description = "CIDR block for the VPC"
   type        = string
-  default     = "10.0.0.0/16"
+  default     = "10.0.0.0/16"  # Private IP range - not routable on internet
   
+  # Ensure the CIDR block is valid IPv4 format
   validation {
     condition     = can(cidrhost(var.vpc_cidr, 0))
     error_message = "VPC CIDR must be a valid IPv4 CIDR block."
@@ -105,14 +135,19 @@ variable "public_subnet_cidrs" {
   }
 }
 
-# ============================================================================
-# SECURITY CONFIGURATION
-# ============================================================================
+# =============================================================================
+# SECURITY CONFIGURATION VARIABLES
+# =============================================================================
+# These variables control security features like bastion hosts and access controls
+# Security should be configured based on your organization's requirements
 
+# Bastion Host for Secure Database Access
+# A bastion host is a secure server that provides access to private resources
+# Only enable if you need to directly access databases for troubleshooting
 variable "create_bastion" {
   description = "Whether to create a bastion host for secure access"
   type        = bool
-  default     = false
+  default     = false  # Disabled by default for security
 }
 
 variable "bastion_allowed_cidr_blocks" {
@@ -128,14 +163,19 @@ variable "bastion_allowed_cidr_blocks" {
   }
 }
 
-# ============================================================================
-# MONITORING AND LOGGING
-# ============================================================================
+# =============================================================================
+# MONITORING AND LOGGING CONFIGURATION
+# =============================================================================
+# These variables control how your infrastructure is monitored and logged
+# Proper monitoring is essential for maintaining system health
 
+# Infrastructure Monitoring Toggle
+# Enables CloudWatch alarms, dashboards, and detailed metrics collection
+# Recommended to keep enabled for production systems
 variable "enable_monitoring" {
   description = "Enable detailed monitoring and logging"
   type        = bool
-  default     = true
+  default     = true  # Always monitor production systems
 }
 
 variable "log_retention_days" {
@@ -149,9 +189,11 @@ variable "log_retention_days" {
   }
 }
 
-# ============================================================================
-# RESOURCE SIZING
-# ============================================================================
+# =============================================================================
+# RESOURCE SIZING OVERRIDES
+# =============================================================================
+# These variables allow you to override default instance types for specific needs
+# Useful for cost optimization or performance tuning
 
 variable "force_instance_types" {
   description = "Force specific instance types (overrides environment defaults)"
@@ -173,9 +215,11 @@ variable "force_instance_types" {
   }
 }
 
-# ============================================================================
+# =============================================================================
 # FEATURE FLAGS
-# ============================================================================
+# =============================================================================
+# These boolean variables enable or disable specific infrastructure features
+# Use these to control costs and complexity based on your needs
 
 variable "enable_vpc_flow_logs" {
   description = "Enable VPC Flow Logs for network monitoring"
@@ -195,9 +239,12 @@ variable "create_ecr_repositories" {
   default     = true
 }
 
-# ============================================================================
+# =============================================================================
 # ENTERPRISE FEATURE FLAGS
-# ============================================================================
+# =============================================================================
+# These variables enable advanced enterprise features like additional databases,
+# enhanced security, compliance monitoring, and enterprise authentication
+# Enable only if you have enterprise requirements and budget
 
 variable "enable_enterprise_databases" {
   description = "Enable enterprise database support (SQL Server, Oracle)"
@@ -241,9 +288,11 @@ variable "enable_enterprise_messaging" {
   default     = false
 }
 
-# ============================================================================
-# TAGGING
-# ============================================================================
+# =============================================================================
+# RESOURCE TAGGING CONFIGURATION
+# =============================================================================
+# Tags help organize resources, track costs, and enforce governance policies
+# Proper tagging is essential for managing large infrastructure deployments
 
 variable "additional_tags" {
   description = "Additional tags to apply to all resources"

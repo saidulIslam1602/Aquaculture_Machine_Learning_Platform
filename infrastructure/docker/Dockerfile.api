@@ -1,26 +1,43 @@
-# ============================================================================
-# Multi-Stage Dockerfile for Aquaculture ML Platform API Service
-# ============================================================================
+# =============================================================================
+# API SERVICE DOCKERFILE - AQUACULTURE PLATFORM BACKEND CONTAINER
+# =============================================================================
 #
-# This Dockerfile creates an optimized, production-ready container for the
-# FastAPI application using multi-stage build pattern for:
+# WHAT IS THIS FILE?
+# This Dockerfile is like a "recipe" for creating a Docker container that runs
+# the main API service of the aquaculture platform. Think of it as instructions
+# for packaging the backend application into a portable, self-contained unit.
 #
-# OPTIMIZATION BENEFITS:
-# - Smaller final image size (excludes build tools)
-# - Faster deployment and startup times
-# - Reduced attack surface (no build dependencies in production)
-# - Improved security (non-root user execution)
+# WHAT IS A DOCKER CONTAINER?
+# A Docker container is like a "shipping container" for software:
+# - Contains everything needed to run the application (code, dependencies, OS)
+# - Runs the same way on any computer (laptop, server, cloud)
+# - Isolated from other applications (can't interfere with each other)
+# - Lightweight and fast to start/stop
 #
-# SECURITY FEATURES:
-# - Non-root user execution
-# - Minimal base image (slim variant)
-# - Clean package cache removal
-# - Explicit dependency copying
+# WHAT DOES THE API SERVICE DO?
+# The API service is the "brain" of the platform that:
+# - Handles user login and authentication
+# - Manages fish farm data (ponds, sensors, feeding schedules)
+# - Processes requests from the web and mobile apps
+# - Connects to the database to store and retrieve information
+# - Communicates with the ML service for predictions
 #
-# BUILD STAGES:
-# 1. Builder: Install dependencies with build tools
-# 2. Runtime: Copy dependencies and run application
-# ============================================================================
+# MULTI-STAGE BUILD EXPLAINED:
+# This uses a "two-stage" build process like building a house:
+# Stage 1 (Builder): Bring in construction tools and materials
+# Stage 2 (Runtime): Keep only the finished house, remove construction tools
+# Result: Smaller, faster, more secure final container
+#
+# KEY BENEFITS:
+# - Smaller containers: Faster deployment and less storage space
+# - Better security: No build tools in production (fewer vulnerabilities)
+# - Faster startup: Less code to load means quicker application start
+# - Cost savings: Smaller images use less bandwidth and storage
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 # ============================================================================
 # STAGE 1: BUILD STAGE

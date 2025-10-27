@@ -1,42 +1,90 @@
-# ============================================================================
-# Base Worker Service Deployment
-# ============================================================================
+# =============================================================================
+# WORKER SERVICE DEPLOYMENT - AQUACULTURE BACKGROUND TASK PROCESSOR
+# =============================================================================
 #
-# This file defines the base worker service deployment configuration that
-# provides distributed task processing using Celery and handles background
-# operations for the Aquaculture ML Platform.
+# WHAT IS THIS FILE?
+# This file defines how to deploy the Worker service that handles background
+# tasks and long-running processes. Think of it as the "behind-the-scenes"
+# workforce that processes tasks without blocking user interactions.
 #
-# FEATURES:
-# - Celery distributed task processing
-# - Kafka message consumption
-# - Background ML inference tasks
-# - Auto-scaling based on queue length
-# - Redis backend integration
-# - Comprehensive error handling
-# ============================================================================
+# WHAT DOES THE WORKER SERVICE DO?
+# - Data processing: Analyzes large datasets from sensors and cameras
+# - Report generation: Creates daily/weekly/monthly farm reports
+# - Email notifications: Sends alerts and updates to farm managers
+# - Image processing: Processes fish photos for health analysis
+# - Data synchronization: Syncs data between different systems
+# - Scheduled tasks: Runs maintenance and cleanup operations
+# - Batch ML inference: Processes multiple predictions efficiently
+#
+# WHY USE BACKGROUND WORKERS?
+# Some tasks take a long time to complete (like analyzing thousands of images).
+# Instead of making users wait, these tasks are queued and processed by workers
+# in the background, allowing the main API to respond quickly to users.
+#
+# KEY TECHNICAL FEATURES:
+# - Celery distributed task processing (Python task queue)
+# - Redis message broker integration (task queue storage)
+# - Kafka message consumption (real-time data streams)
+# - Auto-scaling based on queue length (more workers when busy)
+# - Comprehensive error handling and retry logic
+# - Task monitoring and progress tracking
+#
+# SCALING CHARACTERISTICS:
+# Workers can be scaled horizontally (add more workers) to handle increased
+# task loads. They're designed to be stateless and can be safely restarted.
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: apps/v1
-kind: Deployment
+# =============================================================================
+# WORKER SERVICE DEPLOYMENT DEFINITION
+# =============================================================================
+
+apiVersion: apps/v1                           # Kubernetes API version for deployments
+kind: Deployment                              # Resource type: Deployment
 metadata:
-  name: worker-service
+  name: worker-service                        # Worker service deployment name
+  
+  # =============================================================================
+  # WORKER SERVICE LABELS - IDENTIFICATION AND ORGANIZATION
+  # =============================================================================
+  
   labels:
-    app: worker-service
-    component: worker
-    tier: worker
-    app.kubernetes.io/name: worker-service
-    app.kubernetes.io/component: worker
-    app.kubernetes.io/part-of: aquaculture-platform
+    app: worker-service                                 # Application identifier
+    component: worker                                   # Component type (background worker)
+    tier: worker                                       # Application tier (worker/processing)
+    app.kubernetes.io/name: worker-service            # Standard Kubernetes app name
+    app.kubernetes.io/component: worker                # Standard component label
+    app.kubernetes.io/part-of: aquaculture-platform   # Part of larger platform
+
 spec:
-  replicas: 2  # Base replica count
+  # =============================================================================
+  # REPLICA CONFIGURATION - SCALABLE WORKER POOL
+  # =============================================================================
+  
+  replicas: 2                                 # Start with 2 workers (can scale based on load)
+  
+  # =============================================================================
+  # UPDATE STRATEGY - FLEXIBLE DEPLOYMENT FOR WORKERS
+  # =============================================================================
+  # Workers can tolerate brief downtime since tasks can be retried
+  
   strategy:
-    type: RollingUpdate
+    type: RollingUpdate                       # Gradually replace old pods with new ones
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 1  # Workers can tolerate some downtime
+      maxSurge: 1                             # Allow 1 extra pod during updates
+      maxUnavailable: 1                       # Allow 1 pod to be down (workers are fault-tolerant)
+  
+  # =============================================================================
+  # POD SELECTOR - WHICH PODS THIS DEPLOYMENT MANAGES
+  # =============================================================================
+  
   selector:
     matchLabels:
-      app: worker-service
-      component: worker
+      app: worker-service                     # Match pods with this app label
+      component: worker                       # Match pods with this component label
   template:
     metadata:
       labels:

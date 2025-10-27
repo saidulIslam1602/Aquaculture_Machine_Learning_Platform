@@ -1,24 +1,66 @@
-# ELK Stack Configuration for Centralized Logging
-# Production-ready Elasticsearch, Logstash, and Kibana setup
+# =============================================================================
+# ELK STACK CONFIGURATION - AQUACULTURE PLATFORM CENTRALIZED LOGGING
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This Docker Compose file sets up the ELK Stack (Elasticsearch, Logstash, Kibana)
+# for centralized logging. Think of it as creating a "log analysis center" that
+# collects, processes, and visualizes all logs from the aquaculture platform.
+#
+# WHAT IS THE ELK STACK?
+# ELK is a powerful logging solution consisting of three components:
+# - Elasticsearch: Stores and searches through log data (like a smart database)
+# - Logstash: Processes and transforms log data before storing it
+# - Kibana: Provides web interface for searching and visualizing logs
+#
+# WHY USE ELK FOR LOGGING?
+# Centralized logging is essential because:
+# - Multiple services generate logs (API, ML, worker, database)
+# - Logs help troubleshoot problems and understand system behavior
+# - ELK makes it easy to search through millions of log entries
+# - Kibana provides dashboards to visualize trends and patterns
+# - Helps with compliance and audit requirements
+#
+# HOW ELK WORKS TOGETHER:
+# 1. Applications send logs to Logstash (or directly to Elasticsearch)
+# 2. Logstash processes, filters, and enriches the log data
+# 3. Processed logs are stored in Elasticsearch for fast searching
+# 4. Kibana provides web interface to search, analyze, and visualize logs
+# 5. Users can create dashboards, alerts, and reports from log data
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 version: '3.8'
 
+# =============================================================================
+# ELK STACK SERVICES - LOGGING INFRASTRUCTURE COMPONENTS
+# =============================================================================
+
 services:
-  # Elasticsearch - Search and Analytics Engine
+  # =============================================================================
+  # ELASTICSEARCH - LOG STORAGE AND SEARCH ENGINE
+  # =============================================================================
+  # Elasticsearch stores all log data and provides fast search capabilities
+  
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
-    container_name: aquaculture-elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0  # Official Elasticsearch image
+    container_name: aquaculture-elasticsearch                    # Container name for easy reference
+    
+    # Elasticsearch configuration through environment variables
     environment:
-      - node.name=elasticsearch
-      - cluster.name=aquaculture-cluster
-      - discovery.type=single-node
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"
-      - xpack.security.enabled=false
-      - xpack.security.enrollment.enabled=false
-      - xpack.security.http.ssl.enabled=false
-      - xpack.security.transport.ssl.enabled=false
-      - action.destructive_requires_name=false
+      - node.name=elasticsearch                    # Node name in the cluster
+      - cluster.name=aquaculture-cluster          # Cluster name for this deployment
+      - discovery.type=single-node                # Single node setup (for development/small deployments)
+      - bootstrap.memory_lock=true                # Lock memory to prevent swapping (improves performance)
+      - "ES_JAVA_OPTS=-Xms2g -Xmx2g"             # Java heap size (2GB min/max for log storage)
+      - xpack.security.enabled=false              # Disable security for development (enable in production)
+      - xpack.security.enrollment.enabled=false   # Disable automatic enrollment
+      - xpack.security.http.ssl.enabled=false     # Disable HTTPS (enable in production)
+      - xpack.security.transport.ssl.enabled=false # Disable transport SSL
+      - action.destructive_requires_name=false    # Allow index deletion without explicit names
     ulimits:
       memlock:
         soft: -1

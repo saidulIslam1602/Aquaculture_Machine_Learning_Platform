@@ -1,38 +1,56 @@
-# Kubernetes Infrastructure - Enhanced Structure
+# 🐠 Kubernetes Infrastructure - Aquaculture ML Platform
 
-This directory contains the restructured Kubernetes manifests for the Aquaculture ML Platform, following industry best practices with Kustomize-based configuration management.
+## 📖 What Is This Directory?
 
-## 🏗️ Directory Structure
+This directory contains all the configuration files needed to deploy the Aquaculture ML Platform on Kubernetes. Think of it as the "blueprint" that tells Kubernetes how to run the fish farming application.
+
+**For Beginners**: If Kubernetes is like a smart data center, these files are the instruction manual that tells it:
+- Which applications to run (API, ML service, database)
+- How many copies of each application to run
+- How applications should talk to each other
+- What resources (CPU, memory) each application needs
+- How to handle failures and updates
+
+This setup follows industry best practices with Kustomize-based configuration management, which means the same base configuration can be customized for different environments (development, staging, production) without duplicating code.
+
+## 🏗️ Directory Structure Explained
 
 ```
-infrastructure/kubernetes-new/
-├── base/                          # Base Kubernetes resources
-│   ├── namespace.yaml             # Platform namespace definition
-│   ├── api-service.yaml           # FastAPI backend service
-│   ├── ml-service.yaml            # TensorFlow ML inference service  
-│   ├── worker-service.yaml        # Celery background workers
-│   ├── database.yaml              # PostgreSQL StatefulSet with monitoring
-│   ├── redis.yaml                 # Redis cache and message broker
-│   └── kustomization.yaml         # Base kustomization configuration
-├── overlays/                      # Environment-specific configurations
-│   ├── staging/                   # Staging environment
+infrastructure/kubernetes/
+├── base/                          # 📦 Core Application Components
+│   ├── namespace.yaml             # Creates isolated space for the platform
+│   ├── api-service.yaml           # Main backend API (handles user requests)
+│   ├── ml-service.yaml            # AI/ML predictions for fish health
+│   ├── worker-service.yaml        # Background tasks (data processing)
+│   ├── database.yaml              # PostgreSQL database (stores all data)
+│   ├── redis.yaml                 # Fast cache and message queue
+│   └── kustomization.yaml         # Master configuration file
+├── overlays/                      # 🎯 Environment Customizations
+│   ├── staging/                   # Test environment (smaller, cheaper)
 │   │   ├── kustomization.yaml     # Staging-specific settings
-│   │   ├── postgresql.conf        # Development-optimized DB config
-│   │   └── redis.conf             # Development-optimized cache config
-│   └── production/                # Production environment
+│   │   ├── postgresql.conf        # Database config for testing
+│   │   └── redis.conf             # Cache config for testing
+│   └── production/                # Live environment (larger, robust)
 │       ├── kustomization.yaml     # Production-specific settings
-│       ├── postgresql.conf        # Production-optimized DB config
-│       └── redis.conf             # Production-optimized cache config
-├── monitoring/                    # Monitoring and observability
-│   ├── servicemonitor.yaml        # Prometheus service discovery
-│   ├── prometheus-rules.yaml      # Alerting rules and thresholds
-│   └── kustomization.yaml         # Monitoring resources
-├── secrets/                       # Secret management templates
-│   ├── README.md                  # Secret management guide
-│   ├── api-secrets.yaml.template  # API service secret template
-│   └── database-secrets.yaml.template # Database secret template
-└── README.md                      # This file
+│       ├── postgresql.conf        # Database config for production
+│       └── redis.conf             # Cache config for production
+├── monitoring/                    # 📊 Health Monitoring & Alerts
+│   ├── servicemonitor.yaml        # Tells Prometheus what to monitor
+│   ├── prometheus-rules.yaml      # Alert rules (when to notify)
+│   └── kustomization.yaml         # Monitoring configuration
+├── secrets/                       # 🔐 Security & Credentials
+│   ├── README.md                  # How to manage secrets securely
+│   ├── api-secrets.yaml.template  # Template for API passwords/keys
+│   └── database-secrets.yaml.template # Template for database passwords
+└── README.md                      # This documentation file
 ```
+
+### 🔍 What Each Directory Does:
+
+- **`base/`**: Contains the core application definitions that work everywhere
+- **`overlays/`**: Environment-specific modifications (staging uses fewer resources, production uses more)
+- **`monitoring/`**: Health checks and alerting (know when something breaks)
+- **`secrets/`**: Secure storage templates for passwords and API keys
 
 ## 🚀 Key Improvements
 

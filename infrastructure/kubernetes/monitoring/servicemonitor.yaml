@@ -1,32 +1,62 @@
-# ============================================================================
-# Comprehensive ServiceMonitor Configuration for Aquaculture ML Platform
-# ============================================================================
+# =============================================================================
+# PROMETHEUS MONITORING CONFIGURATION - AQUACULTURE PLATFORM OBSERVABILITY
+# =============================================================================
 #
-# This file consolidates all ServiceMonitor resources for production-grade
-# monitoring with Prometheus Operator. It includes comprehensive metrics
-# collection for all platform components with proper labeling and relabeling.
+# WHAT IS THIS FILE?
+# This file tells Prometheus (a monitoring system) how to collect metrics
+# (performance data) from all the aquaculture platform services. Think of it
+# as setting up "health monitors" for each part of the system.
 #
-# MONITORING COVERAGE:
-# - API Service: HTTP metrics, business KPIs, performance monitoring
-# - ML Service: Model inference metrics, prediction accuracy, latency
-# - Worker Service: Task processing, queue metrics, error rates  
-# - Database: Connection pools, query performance, replication status
-# - Redis: Memory usage, command statistics, persistence metrics
-# - Infrastructure: Node metrics, resource utilization, health checks
-# ============================================================================
+# WHAT IS PROMETHEUS MONITORING?
+# Prometheus is like a "health dashboard" that continuously checks:
+# - How fast services are responding to users
+# - How much memory and CPU each service is using
+# - How many errors are occurring
+# - Business metrics like number of fish farms, predictions made, etc.
+#
+# WHY MONITOR THE PLATFORM?
+# Monitoring helps detect problems before users notice them:
+# - Slow API responses → Need to scale up servers
+# - High error rates → Something is broken and needs fixing
+# - Memory leaks → Services need restarting
+# - Business trends → Understanding platform usage patterns
+#
+# SERVICES BEING MONITORED:
+# - API Service: User request performance and business metrics
+# - ML Service: AI model performance and prediction accuracy
+# - Worker Service: Background task processing and queue health
+# - Database: Query performance and connection health
+# - Redis Cache: Memory usage and cache hit rates
+# - Infrastructure: Overall system health and resource usage
+#
+# HOW IT WORKS:
+# 1. Each service exposes a /metrics endpoint with performance data
+# 2. Prometheus regularly "scrapes" (collects) this data
+# 3. Data is stored in time-series format for analysis
+# 4. Grafana dashboards visualize the data
+# 5. Alertmanager sends notifications when problems are detected
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
 ---
-# API Service Monitor - Comprehensive HTTP and Business Metrics
-apiVersion: monitoring.coreos.com/v1
-kind: ServiceMonitor
+# =============================================================================
+# API SERVICE MONITORING - MAIN BACKEND PERFORMANCE TRACKING
+# =============================================================================
+# Monitors the main API service that handles user requests and business logic
+
+apiVersion: monitoring.coreos.com/v1      # Prometheus Operator API version
+kind: ServiceMonitor                      # Resource type: ServiceMonitor
 metadata:
-  name: api-service-monitor
+  name: api-service-monitor               # Monitor name
   labels:
-    app: api-service
-    component: api
-    tier: backend
-    prometheus: kube-prometheus
-    monitoring.aquaculture.com/scrape: "true"
+    app: api-service                      # Associated with API service
+    component: api                        # Component type
+    tier: backend                         # Application tier
+    prometheus: kube-prometheus           # Prometheus instance to use
+    monitoring.aquaculture.com/scrape: "true"  # Custom monitoring label
 spec:
   selector:
     matchLabels:

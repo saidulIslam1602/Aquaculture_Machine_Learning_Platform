@@ -1,46 +1,129 @@
-# Multi-stage build for Worker service
+# =============================================================================
+# WORKER SERVICE DOCKERFILE - AQUACULTURE PLATFORM BACKGROUND TASK PROCESSOR
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This Dockerfile creates a container for the Worker service that handles
+# background tasks and long-running processes. Think of it as packaging
+# the "behind-the-scenes workforce" that processes tasks without blocking users.
+#
+# WHAT DOES THE WORKER SERVICE DO?
+# The Worker service is the "task processor" that handles:
+# - Data processing: Analyzes large datasets from sensors and cameras
+# - Report generation: Creates daily/weekly/monthly farm reports
+# - Email notifications: Sends alerts and updates to farm managers
+# - Image processing: Processes fish photos for health analysis
+# - Data synchronization: Syncs data between different systems
+# - Scheduled tasks: Runs maintenance and cleanup operations
+# - Batch ML inference: Processes multiple predictions efficiently
+#
+# WHY USE BACKGROUND WORKERS?
+# Some tasks take a long time to complete (like analyzing thousands of images).
+# Instead of making users wait, these tasks are queued and processed by workers
+# in the background, allowing the main API to respond quickly to users.
+#
+# CELERY TASK QUEUE SYSTEM:
+# - Celery: Python library for distributed task processing
+# - Redis: Message broker that stores the task queue
+# - Workers: Multiple processes that pick up and execute tasks
+# - Monitoring: Health checks to ensure workers are processing tasks
+#
+# CONTAINER OPTIMIZATIONS FOR WORKERS:
+# - Multi-stage build to reduce image size
+# - Dedicated directories for logs and temporary data
+# - Celery-specific health checks (ping worker processes)
+# - Configurable concurrency for task processing
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
+# =============================================================================
+# STAGE 1: BUILD STAGE - INSTALL WORKER DEPENDENCIES
+# =============================================================================
+# Install Python libraries needed for background task processing
+
 FROM python:3.10-slim as builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install build dependencies for worker libraries
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    gcc \                    # C compiler for native extensions
+    g++ \                    # C++ compiler for performance libraries
+    libpq-dev \             # PostgreSQL development headers
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache
 
+# Copy Python requirements (includes Celery, Redis client, etc.)
 COPY requirements.txt .
+
+# Install Python worker dependencies to user directory
 RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Final stage
+# =============================================================================
+# STAGE 2: RUNTIME STAGE - CREATE WORKER CONTAINER
+# =============================================================================
+# Create optimized runtime image for background task processing
+
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies for worker service
 RUN apt-get update && apt-get install -y \
-    libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+    libpq5 \                # PostgreSQL client library (runtime)
+    && rm -rf /var/lib/apt/lists/*  # Clean package cache
 
-# Copy Python dependencies
+# Copy Python worker dependencies from builder stage
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy worker service application code
 COPY services/worker /app/services/worker
 COPY services/__init__.py /app/services/__init__.py
 
-# Create directories for logs and data
+# =============================================================================
+# WORKER-SPECIFIC DIRECTORY SETUP
+# =============================================================================
+# Create directories for worker operations and temporary storage
+
+# Create directories for worker operations
 RUN mkdir -p /app/logs /app/data
 
-# Create non-root user
+# /app/logs: Store worker process logs and task execution logs
+# /app/data: Temporary storage for data processing and file operations
+
+# =============================================================================
+# SECURITY: NON-ROOT USER FOR WORKER SERVICE
+# =============================================================================
+# Create dedicated user for worker service (security best practice)
+
+# Create worker service user with specific UID
 RUN useradd -m -u 1000 worker && chown -R worker:worker /app
 USER worker
 
-# Health check for worker (check if Celery is running)
+# =============================================================================
+# HEALTH CHECK FOR WORKER SERVICE
+# =============================================================================
+# Check if Celery worker processes are running and responding
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD celery -A services.worker.celery_app inspect ping || exit 1
 
-# Start Celery worker
+# Health check parameters for worker service:
+# --start-period=60s: Longer grace period (workers need time to connect to Redis)
+# Uses Celery's built-in ping command to check worker health
+
+# =============================================================================
+# WORKER SERVICE STARTUP
+# =============================================================================
+# Start Celery worker processes for background task execution
+
 CMD ["celery", "-A", "services.worker.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
+
+# Celery worker parameters:
+# -A services.worker.celery_app: Application module containing Celery instance
+# worker: Start worker process (not beat scheduler or flower monitor)
+# --loglevel=info: Log level for debugging and monitoring
+# --concurrency=4: Number of worker processes (can be adjusted based on CPU cores)

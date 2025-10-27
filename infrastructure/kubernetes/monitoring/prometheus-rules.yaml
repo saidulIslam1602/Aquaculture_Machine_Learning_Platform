@@ -1,48 +1,90 @@
-# ============================================================================
-# Comprehensive PrometheusRule for Aquaculture ML Platform
-# ============================================================================
+# =============================================================================
+# PROMETHEUS ALERTING RULES - AQUACULTURE PLATFORM AUTOMATED NOTIFICATIONS
+# =============================================================================
 #
-# This file defines production-grade alerting rules for comprehensive
-# monitoring of the Aquaculture ML Platform. Rules are organized by
-# component and severity level with proper escalation paths.
+# WHAT IS THIS FILE?
+# This file defines "alerting rules" that automatically send notifications
+# when something goes wrong with the aquaculture platform. Think of it as
+# setting up "smoke detectors" that alert the team when problems occur.
+#
+# WHAT ARE ALERTING RULES?
+# Alerting rules are conditions that trigger notifications:
+# - "If API response time > 5 seconds for 2 minutes → Send alert"
+# - "If database CPU > 90% for 5 minutes → Send critical alert"
+# - "If ML service is down → Send immediate notification"
+#
+# WHY USE AUTOMATED ALERTS?
+# Instead of manually checking dashboards 24/7, alerts notify the team when:
+# - Services go down (so users can't access the platform)
+# - Performance degrades (slow responses, high error rates)
+# - Resources are running low (disk space, memory)
+# - Business metrics are abnormal (no predictions being made)
+#
+# ALERT SEVERITY LEVELS:
+# - CRITICAL: Immediate action required (service down, data loss risk)
+# - WARNING: Attention needed soon (performance degradation)
+# - INFO: Awareness alerts (maintenance windows, deployments)
 #
 # ALERT CATEGORIES:
-# - Infrastructure: Node health, resource utilization, Kubernetes health
-# - Application: Service availability, response times, error rates
-# - Business: KPI thresholds, data quality, processing delays
-# - Security: Authentication failures, suspicious activity
-# - Performance: Latency, throughput, resource efficiency
-# ============================================================================
+# - Infrastructure: Server health, network, storage
+# - Application: Service availability, errors, performance
+# - Business: Fish farm metrics, prediction accuracy, user activity
+# - Security: Failed logins, suspicious activity
+#
+# HOW ALERTS WORK:
+# 1. Prometheus evaluates these rules every 30 seconds
+# 2. When a condition is met, an alert is "fired"
+# 3. Alertmanager receives the alert and sends notifications
+# 4. Notifications go to Slack, email, or on-call systems
+# 5. Team investigates and resolves the issue
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
 
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+# =============================================================================
+# PROMETHEUS RULE RESOURCE DEFINITION
+# =============================================================================
+
+apiVersion: monitoring.coreos.com/v1        # Prometheus Operator API version
+kind: PrometheusRule                        # Resource type: PrometheusRule
 metadata:
-  name: aquaculture-platform-alerts
+  name: aquaculture-platform-alerts        # Rule set name
   labels:
-    prometheus: kube-prometheus
-    role: alert-rules
-    app: aquaculture-platform
+    prometheus: kube-prometheus             # Prometheus instance to use
+    role: alert-rules                       # Role identifier
+    app: aquaculture-platform              # Application identifier
+
 spec:
+  # =============================================================================
+  # ALERT RULE GROUPS - ORGANIZED BY COMPONENT AND SEVERITY
+  # =============================================================================
+  
   groups:
   
-  # ========================================
-  # CRITICAL INFRASTRUCTURE ALERTS
-  # ========================================
-  - name: infrastructure.critical
-    interval: 30s
+  # =============================================================================
+  # CRITICAL INFRASTRUCTURE ALERTS - IMMEDIATE ATTENTION REQUIRED
+  # =============================================================================
+  # These alerts indicate serious problems that need immediate response
+  
+  - name: infrastructure.critical           # Rule group name
+    interval: 30s                          # How often to evaluate rules
     rules:
     
+    # Node Down Alert - Server/Worker Node Failure
+    # This alert fires when a Kubernetes node (server) stops responding
     - alert: NodeDown
-      expr: up{job="node-exporter"} == 0
-      for: 1m
+      expr: up{job="node-exporter"} == 0   # Condition: node-exporter is down
+      for: 1m                              # Wait 1 minute before alerting (avoid false positives)
       labels:
-        severity: critical
-        component: infrastructure
-        team: sre
+        severity: critical                  # Alert severity level
+        component: infrastructure           # Which component is affected
+        team: sre                          # Which team should respond
       annotations:
-        summary: "Node is down"
-        description: "Node {{ $labels.instance }} has been down for more than 1 minute"
-        runbook_url: "https://docs.aquaculture.com/runbooks/node-down"
+        summary: "Node is down"                                                    # Short description
+        description: "Node {{ $labels.instance }} has been down for more than 1 minute"  # Detailed description
+        runbook_url: "https://docs.aquaculture.com/runbooks/node-down"           # Link to troubleshooting guide
     
     - alert: NodeMemoryHigh
       expr: |

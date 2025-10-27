@@ -1,11 +1,45 @@
+# =============================================================================
+# GRAFANA DATASOURCE CONFIGURATION - PROMETHEUS CONNECTION
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This file tells Grafana how to connect to Prometheus to get monitoring data.
+# Think of it as setting up the "data pipeline" between the monitoring system
+# (Prometheus) and the dashboard system (Grafana).
+#
+# WHAT IS A DATASOURCE?
+# A datasource is like a "data connection" that tells Grafana:
+# - Where to find the monitoring data (Prometheus server)
+# - How to connect to it (URL, authentication)
+# - What type of data it provides (metrics, logs, traces)
+# - How often to refresh the data
+#
+# WHY PROMETHEUS AS DATASOURCE?
+# Prometheus is the primary datasource because it:
+# - Stores all the performance metrics from the platform
+# - Provides a powerful query language (PromQL) for analyzing data
+# - Integrates seamlessly with Grafana for visualization
+# - Handles time-series data efficiently for historical analysis
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
 apiVersion: 1
 
+# =============================================================================
+# DATASOURCE CONFIGURATION - PROMETHEUS CONNECTION SETTINGS
+# =============================================================================
+
 datasources:
-  - name: Prometheus
-    type: prometheus
-    access: proxy
-    url: http://prometheus:9090
-    isDefault: true
-    editable: true
+  - name: Prometheus                    # Display name in Grafana
+    type: prometheus                    # Type of datasource (Prometheus metrics)
+    access: proxy                       # Access mode (proxy through Grafana server)
+    url: http://prometheus:9090         # Prometheus server URL (internal Docker network)
+    isDefault: true                     # Make this the default datasource for new dashboards
+    editable: true                      # Allow users to modify this datasource in Grafana UI
+    
+    # Additional configuration for Prometheus connection
     jsonData:
-      timeInterval: "15s"
+      timeInterval: "15s"               # Default scrape interval (matches Prometheus config)

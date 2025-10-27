@@ -1,53 +1,83 @@
-# Terraform Outputs
-# Export important resource information for use by other systems
+# =============================================================================
+# TERRAFORM OUTPUTS - INFRASTRUCTURE INFORMATION EXPORT
+# =============================================================================
+# Outputs export important information about created resources for use by:
+# - Application deployment scripts
+# - Other Terraform configurations
+# - CI/CD pipelines
+# - Monitoring and management tools
+# - Development teams who need connection details
+# 
+# Outputs are organized by category for easy consumption:
+# - Infrastructure info (VPC, subnets, account details)
+# - Compute resources (EKS cluster, load balancer)
+# - Databases and caches (connection strings, endpoints)
+# - Storage and registries (S3 buckets, ECR repositories)
+# - Security information (security groups, KMS keys)
+# - Monitoring and logging (log groups, dashboards)
 
-# ============================================================================
+# =============================================================================
 # INFRASTRUCTURE INFORMATION
-# ============================================================================
+# =============================================================================
+# Basic information about the AWS environment and network setup
 
+# AWS Account and Region Information
+# Useful for scripts that need to know which account/region they're working with
 output "account_info" {
   description = "AWS account and region information"
   value = {
-    account_id = local.account_id
-    region     = local.region
+    account_id = local.account_id  # AWS account ID where resources are deployed
+    region     = local.region      # AWS region where resources are deployed
   }
 }
 
+# VPC Network Information
+# Complete network topology information for applications and other infrastructure
 output "vpc_info" {
   description = "VPC network information"
   value = {
-    vpc_id     = module.vpc.vpc_id
-    cidr_block = module.vpc.vpc_cidr_block
+    vpc_id     = module.vpc.vpc_id         # VPC ID for security group references
+    cidr_block = module.vpc.vpc_cidr_block # VPC IP range for network planning
+    
+    # Public subnets (internet-facing resources like load balancers)
     public_subnets = {
-      ids   = module.vpc.public_subnets
-      cidrs = module.vpc.public_subnets_cidr_blocks
+      ids   = module.vpc.public_subnets              # Subnet IDs for resource placement
+      cidrs = module.vpc.public_subnets_cidr_blocks  # IP ranges for network ACLs
     }
+    
+    # Private subnets (application servers, Kubernetes nodes)
     private_subnets = {
-      ids   = module.vpc.private_subnets
-      cidrs = module.vpc.private_subnets_cidr_blocks
+      ids   = module.vpc.private_subnets              # Subnet IDs for resource placement
+      cidrs = module.vpc.private_subnets_cidr_blocks  # IP ranges for network ACLs
     }
+    
+    # Database subnets (isolated database resources)
     database_subnets = {
-      ids   = module.vpc.database_subnets
-      cidrs = module.vpc.database_subnets_cidr_blocks
+      ids   = module.vpc.database_subnets              # Subnet IDs for database placement
+      cidrs = module.vpc.database_subnets_cidr_blocks  # IP ranges for database security
     }
-    nat_gateway_ips = module.vpc.nat_public_ips
+    
+    nat_gateway_ips = module.vpc.nat_public_ips  # NAT Gateway IPs for firewall rules
   }
 }
 
-# ============================================================================
+# =============================================================================
 # COMPUTE RESOURCES
-# ============================================================================
+# =============================================================================
+# Information about Kubernetes cluster and load balancer for application deployment
 
+# EKS Cluster Information
+# Everything applications need to connect to and deploy on the Kubernetes cluster
 output "eks_info" {
   description = "EKS cluster information"
   value = {
-    cluster_name                = module.eks.cluster_name
-    cluster_endpoint           = module.eks.cluster_endpoint
-    cluster_version            = module.eks.cluster_version
-    cluster_security_group_id  = module.eks.cluster_security_group_id
-    node_security_group_id     = module.eks.node_security_group_id
-    oidc_provider_arn          = module.eks.oidc_provider_arn
-    cluster_certificate_authority_data = module.eks.cluster_certificate_authority_data
+    cluster_name                = module.eks.cluster_name                 # Cluster name for kubectl commands
+    cluster_endpoint           = module.eks.cluster_endpoint              # API server endpoint for kubectl
+    cluster_version            = module.eks.cluster_version               # Kubernetes version
+    cluster_security_group_id  = module.eks.cluster_security_group_id     # Security group for cluster access
+    node_security_group_id     = module.eks.node_security_group_id        # Security group for worker nodes
+    oidc_provider_arn          = module.eks.oidc_provider_arn             # For IAM roles for service accounts
+    cluster_certificate_authority_data = module.eks.cluster_certificate_authority_data  # CA cert for secure connection
   }
 }
 
@@ -61,25 +91,28 @@ output "load_balancer_info" {
   }
 }
 
-# ============================================================================
-# DATABASE AND CACHE
-# ============================================================================
+# =============================================================================
+# DATABASE AND CACHE INFORMATION
+# =============================================================================
+# Connection details for databases and caches (marked sensitive for security)
 
+# PostgreSQL Database Information
+# Everything applications need to connect to the primary database
 output "database_info" {
   description = "RDS PostgreSQL database information"
   value = {
-    endpoint                = module.rds.db_instance_endpoint
-    port                   = module.rds.db_instance_port
-    database_name          = module.rds.db_instance_name
-    username               = module.rds.db_instance_username
-    identifier             = module.rds.db_instance_identifier
-    availability_zone      = module.rds.db_instance_availability_zone
-    multi_az               = module.rds.db_instance_multi_az
-    backup_retention_period = module.rds.db_instance_backup_retention_period
-    backup_window          = module.rds.db_instance_backup_window
-    maintenance_window     = module.rds.db_instance_maintenance_window
+    endpoint                = module.rds.db_instance_endpoint          # Database connection endpoint
+    port                   = module.rds.db_instance_port              # Database port (5432)
+    database_name          = module.rds.db_instance_name              # Database name
+    username               = module.rds.db_instance_username          # Master username
+    identifier             = module.rds.db_instance_identifier        # AWS RDS identifier
+    availability_zone      = module.rds.db_instance_availability_zone  # Primary AZ
+    multi_az               = module.rds.db_instance_multi_az           # High availability status
+    backup_retention_period = module.rds.db_instance_backup_retention_period  # Backup retention
+    backup_window          = module.rds.db_instance_backup_window      # Backup time window
+    maintenance_window     = module.rds.db_instance_maintenance_window # Maintenance time window
   }
-  sensitive = true
+  sensitive = true  # Hide from logs and console output for security
 }
 
 output "enterprise_database_info" {
@@ -100,34 +133,39 @@ output "enterprise_database_info" {
   sensitive = true
 }
 
+# Redis Cache Information
+# Connection details for the Redis cache cluster
 output "cache_info" {
   description = "ElastiCache Redis information"
   value = {
-    primary_endpoint   = aws_elasticache_replication_group.redis.primary_endpoint_address
-    reader_endpoint    = aws_elasticache_replication_group.redis.reader_endpoint_address
-    port              = aws_elasticache_replication_group.redis.port
-    node_type         = aws_elasticache_replication_group.redis.node_type
-    num_cache_clusters = aws_elasticache_replication_group.redis.num_cache_clusters
-    engine_version    = aws_elasticache_replication_group.redis.engine_version
+    primary_endpoint   = aws_elasticache_replication_group.redis.primary_endpoint_address  # Write endpoint
+    reader_endpoint    = aws_elasticache_replication_group.redis.reader_endpoint_address   # Read endpoint
+    port              = aws_elasticache_replication_group.redis.port                       # Redis port (6379)
+    node_type         = aws_elasticache_replication_group.redis.node_type                  # Instance type
+    num_cache_clusters = aws_elasticache_replication_group.redis.num_cache_clusters        # Number of nodes
+    engine_version    = aws_elasticache_replication_group.redis.engine_version             # Redis version
   }
-  sensitive = true
+  sensitive = true  # Hide from logs and console output for security
 }
 
-# ============================================================================
-# MESSAGING
-# ============================================================================
+# =============================================================================
+# MESSAGING SYSTEM INFORMATION
+# =============================================================================
+# Connection details for the Kafka message streaming platform
 
+# Kafka Cluster Information
+# Everything applications need to connect to Kafka for real-time messaging
 output "messaging_info" {
   description = "MSK Kafka cluster information"
   value = {
-    cluster_name           = aws_msk_cluster.kafka.cluster_name
-    bootstrap_brokers      = aws_msk_cluster.kafka.bootstrap_brokers
-    bootstrap_brokers_tls  = aws_msk_cluster.kafka.bootstrap_brokers_tls
-    zookeeper_connect_string = aws_msk_cluster.kafka.zookeeper_connect_string
-    kafka_version         = aws_msk_cluster.kafka.kafka_version
-    number_of_broker_nodes = aws_msk_cluster.kafka.number_of_broker_nodes
+    cluster_name           = aws_msk_cluster.kafka.cluster_name            # Kafka cluster name
+    bootstrap_brokers      = aws_msk_cluster.kafka.bootstrap_brokers       # Broker endpoints (plain)
+    bootstrap_brokers_tls  = aws_msk_cluster.kafka.bootstrap_brokers_tls   # Broker endpoints (TLS)
+    zookeeper_connect_string = aws_msk_cluster.kafka.zookeeper_connect_string  # Zookeeper connection
+    kafka_version         = aws_msk_cluster.kafka.kafka_version            # Kafka version
+    number_of_broker_nodes = aws_msk_cluster.kafka.number_of_broker_nodes  # Number of brokers
   }
-  sensitive = true
+  sensitive = true  # Hide from logs and console output for security
 }
 
 # ============================================================================
@@ -257,39 +295,52 @@ output "kms_keys" {
   }
 }
 
-# ============================================================================
-# CONNECTION INFORMATION
-# ============================================================================
+# =============================================================================
+# CONNECTION STRINGS - READY-TO-USE CONNECTION INFORMATION
+# =============================================================================
+# Pre-formatted connection strings that applications can use directly
 
+# Application Connection Strings
+# Ready-to-use connection strings for common application frameworks
 output "connection_strings" {
   description = "Connection strings for applications"
   value = {
+    # PostgreSQL connection string (format: postgresql://user@host:port/database)
     database = "postgresql://${module.rds.db_instance_username}@${module.rds.db_instance_endpoint}:${module.rds.db_instance_port}/${module.rds.db_instance_name}"
+    
+    # Redis connection string (format: redis://host:port)
     redis    = "redis://${aws_elasticache_replication_group.redis.primary_endpoint_address}:${aws_elasticache_replication_group.redis.port}"
+    
+    # Kafka bootstrap brokers (TLS-encrypted endpoints)
     kafka    = aws_msk_cluster.kafka.bootstrap_brokers_tls
   }
-  sensitive = true
+  sensitive = true  # Hide from logs and console output for security
 }
 
-# ============================================================================
-# KUBERNETES CONFIGURATION
-# ============================================================================
+# =============================================================================
+# KUBERNETES CONFIGURATION - CLUSTER ACCESS
+# =============================================================================
+# Information needed to connect to and manage the Kubernetes cluster
 
+# kubectl Configuration Command
+# Run this command to configure kubectl to access the EKS cluster
 output "kubectl_config_command" {
   description = "Command to configure kubectl for EKS cluster"
   value       = "aws eks update-kubeconfig --region ${local.region} --name ${module.eks.cluster_name}"
 }
 
+# Kubernetes Configuration Details
+# Detailed cluster information for programmatic access (CI/CD, automation)
 output "kubeconfig" {
   description = "Kubernetes configuration for connecting to EKS cluster"
   value = {
-    cluster_name                         = module.eks.cluster_name
-    endpoint                            = module.eks.cluster_endpoint
-    certificate_authority_data          = module.eks.cluster_certificate_authority_data
-    region                              = local.region
-    oidc_issuer_url                     = module.eks.cluster_oidc_issuer_url
+    cluster_name                         = module.eks.cluster_name                    # Cluster name
+    endpoint                            = module.eks.cluster_endpoint                # API server endpoint
+    certificate_authority_data          = module.eks.cluster_certificate_authority_data  # CA certificate
+    region                              = local.region                              # AWS region
+    oidc_issuer_url                     = module.eks.cluster_oidc_issuer_url        # OIDC provider URL
   }
-  sensitive = true
+  sensitive = true  # Hide from logs and console output for security
 }
 
 # ============================================================================
@@ -325,29 +376,40 @@ output "environment_config" {
   }
 }
 
-# ============================================================================
-# LEGACY OUTPUTS (for backward compatibility)
-# ============================================================================
+# =============================================================================
+# LEGACY OUTPUTS - BACKWARD COMPATIBILITY
+# =============================================================================
+# These outputs maintain compatibility with older scripts and applications
+# They provide simple, single-value outputs for common connection endpoints
+# Use the structured outputs above for new applications
 
+# EKS Cluster Endpoint (Legacy)
+# Simple cluster endpoint for older kubectl configurations
 output "eks_cluster_endpoint" {
   description = "EKS cluster endpoint (legacy output)"
   value       = module.eks.cluster_endpoint
 }
 
+# RDS Database Endpoint (Legacy)
+# Simple database endpoint for older application configurations
 output "rds_endpoint" {
   description = "RDS endpoint (legacy output)"
   value       = module.rds.db_instance_endpoint
-  sensitive   = true
+  sensitive   = true  # Hide from logs for security
 }
 
+# Redis Cache Endpoint (Legacy)
+# Simple Redis endpoint for older application configurations
 output "redis_endpoint" {
   description = "Redis endpoint (legacy output)"
   value       = aws_elasticache_replication_group.redis.primary_endpoint_address
-  sensitive   = true
+  sensitive   = true  # Hide from logs for security
 }
 
+# Kafka Bootstrap Brokers (Legacy)
+# Simple Kafka brokers list for older application configurations
 output "kafka_bootstrap_brokers" {
   description = "Kafka bootstrap brokers (legacy output)"
   value       = aws_msk_cluster.kafka.bootstrap_brokers_tls
-  sensitive   = true
+  sensitive   = true  # Hide from logs for security
 }

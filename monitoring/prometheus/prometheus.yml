@@ -1,61 +1,122 @@
-# Enhanced Prometheus Configuration for Aquaculture ML Platform
-# Production-ready monitoring with comprehensive metrics collection
+# =============================================================================
+# PROMETHEUS CONFIGURATION - AQUACULTURE PLATFORM MONITORING SYSTEM
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This file configures Prometheus, the monitoring system that collects and
+# stores performance data from all parts of the aquaculture platform.
+# Think of it as setting up a "health monitoring dashboard" for the entire system.
+#
+# WHAT IS PROMETHEUS?
+# Prometheus is like a "data collector" that:
+# - Gathers performance metrics from all services (API, ML, database, etc.)
+# - Stores this data in a time-series database
+# - Provides alerts when something goes wrong
+# - Enables creation of dashboards and graphs
+# - Helps track system health and performance over time
+#
+# HOW PROMETHEUS WORKS:
+# 1. "Scraping": Prometheus regularly visits each service to collect metrics
+# 2. "Storage": Metrics are stored with timestamps for historical analysis
+# 3. "Querying": Data can be queried to create graphs and alerts
+# 4. "Alerting": Rules trigger notifications when thresholds are exceeded
+#
+# KEY CONCEPTS FOR BEGINNERS:
+# - Metrics: Numerical data about system performance (CPU, memory, requests)
+# - Scrape: Process of collecting metrics from services
+# - Target: A service that Prometheus monitors
+# - Job: A group of similar targets (all API servers, all databases)
+# - Labels: Tags that help organize and filter metrics
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
+# =============================================================================
+# GLOBAL CONFIGURATION - BASIC PROMETHEUS SETTINGS
+# =============================================================================
+# These settings apply to all monitoring activities
 
 global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
+  scrape_interval: 15s              # How often to collect metrics from services (every 15 seconds)
+  evaluation_interval: 15s          # How often to check alerting rules (every 15 seconds)
+  
+  # External labels help identify this Prometheus instance in multi-cluster setups
   external_labels:
-    cluster: 'aquaculture-ml-platform'
-    environment: 'production'
-    datacenter: 'primary'
+    cluster: 'aquaculture-ml-platform'     # Which cluster this monitors
+    environment: 'production'              # Which environment (production, staging, dev)
+    datacenter: 'primary'                  # Which datacenter or region
 
-# Rule files for alerting
+# =============================================================================
+# ALERTING RULES - AUTOMATED PROBLEM DETECTION
+# =============================================================================
+# These files contain rules that automatically detect problems and send alerts
+
 rule_files:
-  - "rules/api_alerts.yml"
-  - "rules/infrastructure_alerts.yml"
-  - "rules/business_alerts.yml"
-  - "rules/ml_model_alerts.yml"
-  - "rules/sla_alerts.yml"
-  - "rules/security_alerts.yml"
+  - "rules/api_alerts.yml"              # API service performance and error alerts
+  - "rules/infrastructure_alerts.yml"   # Server and infrastructure health alerts
+  - "rules/business_alerts.yml"         # Business metric and KPI alerts
+  - "rules/ml_model_alerts.yml"         # ML model performance and accuracy alerts
+  - "rules/sla_alerts.yml"             # Service level agreement violation alerts
+  - "rules/security_alerts.yml"        # Security incident and breach alerts
 
-# Alertmanager configuration
+# =============================================================================
+# ALERTMANAGER CONFIGURATION - NOTIFICATION SYSTEM
+# =============================================================================
+# Alertmanager receives alerts from Prometheus and sends notifications
+
 alerting:
   alertmanagers:
     - static_configs:
         - targets:
-          - alertmanager:9093
-      timeout: 10s
-      api_version: v2
-      path_prefix: /
-      scheme: http
+          - alertmanager:9093           # Alertmanager service location
+      timeout: 10s                     # How long to wait for Alertmanager response
+      api_version: v2                  # Alertmanager API version to use
+      path_prefix: /                   # URL path prefix for Alertmanager
+      scheme: http                     # Protocol to use (http or https)
 
-# Enhanced scrape configurations
+# =============================================================================
+# SCRAPE CONFIGURATIONS - WHAT SERVICES TO MONITOR
+# =============================================================================
+# Each job defines how Prometheus collects metrics from different services
+
 scrape_configs:
-  # Prometheus self-monitoring
+  # =============================================================================
+  # PROMETHEUS SELF-MONITORING
+  # =============================================================================
+  # Monitor Prometheus itself to ensure the monitoring system is healthy
+  
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
-    scrape_interval: 15s
-    metrics_path: '/metrics'
-    honor_labels: true
+      - targets: ['localhost:9090']    # Prometheus runs on port 9090
+    scrape_interval: 15s               # Check every 15 seconds
+    metrics_path: '/metrics'           # Where Prometheus exposes its own metrics
+    honor_labels: true                 # Keep original metric labels
 
-  # Aquaculture API Service (Enhanced)
+  # =============================================================================
+  # AQUACULTURE API SERVICE MONITORING
+  # =============================================================================
+  # Monitor the main backend API that handles user requests
+  
   - job_name: 'aquaculture-api'
     static_configs:
-      - targets: ['api:8000']
-    metrics_path: '/metrics'
-    scrape_interval: 5s
-    scrape_timeout: 10s
-    honor_labels: true
+      - targets: ['api:8000']          # API service runs on port 8000
+    metrics_path: '/metrics'           # API metrics endpoint
+    scrape_interval: 5s                # Check every 5 seconds (more frequent for critical service)
+    scrape_timeout: 10s                # Wait up to 10 seconds for response
+    honor_labels: true                 # Preserve original labels from service
     params:
-      format: ['prometheus']
+      format: ['prometheus']           # Request metrics in Prometheus format
+    
+    # Metric relabeling: Add component labels to organize metrics
     metric_relabel_configs:
+      - source_labels: [__name__]      # Look at metric names
+        regex: 'http_.*'               # If metric starts with "http_"
+        target_label: component        # Add a "component" label
+        replacement: 'api'             # Set component value to "api"
       - source_labels: [__name__]
-        regex: 'http_.*'
-        target_label: component
-        replacement: 'api'
-      - source_labels: [__name__]
-        regex: 'fastapi_.*'
+        regex: 'fastapi_.*'            # If metric starts with "fastapi_"
         target_label: component
         replacement: 'api'
 
