@@ -32,7 +32,7 @@ from fastapi import (
 )
 from fastapi.responses import JSONResponse
 from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from PIL import Image
 import io
 import base64
@@ -84,13 +84,14 @@ class PredictionRequest(BaseModel):
     model_version: Optional[str] = Field(
         None,
         description="Model version to use (defaults to active version)",
-        regex=r"^v\d+\.\d+\.\d+$",
+        pattern=r"^v\d+\.\d+\.\d+$",
     )
     return_probabilities: bool = Field(
         False, description="Return probabilities for all classes"
     )
 
-    @validator("image_base64")
+    @field_validator("image_base64")
+    @classmethod
     def validate_base64(cls, v):
         """Validate base64 encoding"""
         try:
@@ -99,14 +100,15 @@ class PredictionRequest(BaseModel):
         except Exception:
             raise ValueError("Invalid base64 encoding")
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
                 "model_version": "v1.0.0",
                 "return_probabilities": True,
             }
         }
+    }
 
 
 class PredictionResponse(BaseModel):
@@ -135,8 +137,8 @@ class PredictionResponse(BaseModel):
         None, description="Probabilities for all classes"
     )
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "species": "Tilapia",
                 "species_id": 1,
@@ -146,6 +148,7 @@ class PredictionResponse(BaseModel):
                 "timestamp": "2025-10-07T12:00:00Z",
             }
         }
+    }
 
 
 class AsyncPredictionResponse(BaseModel):
@@ -165,8 +168,8 @@ class AsyncPredictionResponse(BaseModel):
     message: str = Field(..., description="Status message")
     check_url: str = Field(..., description="URL to check task status")
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "task_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 "status": "PENDING",
@@ -174,6 +177,7 @@ class AsyncPredictionResponse(BaseModel):
                 "check_url": "/api/v1/ml/tasks/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             }
         }
+    }
 
 
 class BatchPredictionRequest(BaseModel):
@@ -194,7 +198,7 @@ class BatchPredictionRequest(BaseModel):
         min_items=1,
         max_items=100,  # Limit batch size
     )
-    model_version: Optional[str] = Field(None, regex=r"^v\d+\.\d+\.\d+$")
+    model_version: Optional[str] = Field(None, pattern=r"^v\d+\.\d+\.\d+$")
     batch_size: int = Field(32, description="Processing batch size", ge=1, le=64)
 
 
