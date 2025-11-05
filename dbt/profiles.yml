@@ -1,0 +1,39 @@
+agricultural_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: agricultural_iot
+      password: agricultural_iot123
+      port: 5432
+      dbname: agricultural_iot_db
+      schema: dbt_dev
+      threads: 4
+      keepalives_idle: 0
+      connect_timeout: 10
+      retries: 1
+      
+    prod:
+      type: postgres
+      host: "{{ env_var('TIMESCALEDB_HOST') }}"
+      user: "{{ env_var('TIMESCALEDB_USER') }}"
+      password: "{{ env_var('TIMESCALEDB_PASSWORD') }}"
+      port: "{{ env_var('TIMESCALEDB_PORT') | as_number }}"
+      dbname: "{{ env_var('TIMESCALEDB_DATABASE') }}"
+      schema: dbt_prod
+      threads: 8
+      keepalives_idle: 0
+      connect_timeout: 10
+      retries: 2
+      
+    bigquery:
+      type: bigquery
+      method: service-account
+      project: "{{ var('bigquery_project') }}"
+      dataset: "{{ var('bigquery_dataset') }}"
+      keyfile: /app/credentials/bigquery-service-account.json
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive
+      retries: 1

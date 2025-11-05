@@ -1,0 +1,74 @@
+name: 'agricultural_analytics'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'agricultural_analytics'
+
+# These configurations specify where dbt should look for different types of files.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Configuring models
+models:
+  agricultural_analytics:
+    # Config indicated by + and applies to all files under models/example/
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+
+# Configuring seeds
+seeds:
+  agricultural_analytics:
+    +schema: seeds
+
+# Configuring snapshots
+snapshots:
+  agricultural_analytics:
+    +target_schema: snapshots
+
+# Variables for the project
+vars:
+  # TimescaleDB specific configurations
+  timescale_chunk_interval: '1 day'
+  retention_period: '90 days'
+  
+  # Data quality thresholds
+  data_quality_threshold: 0.8
+  anomaly_detection_threshold: 2.0
+  
+  # Business logic parameters
+  health_alert_threshold: 0.7
+  fence_violation_buffer_meters: 10.0
+  
+  # BigQuery configurations
+  bigquery_project: 'agricultural-iot-analytics'
+  bigquery_dataset: 'agricultural_telemetry'
+  
+  # Date ranges for incremental models
+  start_date: '2024-01-01'
+  
+# dbt-utils configurations
+dispatch:
+  - macro_namespace: dbt_utils
+    search_order: ['agricultural_analytics', 'dbt_utils']
+
+# Documentation
+docs:
+  agricultural_analytics:
+    node_color: '#4CAF50'  # Green theme for agricultural data
