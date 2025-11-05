@@ -1,31 +1,32 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:15-alpine
-    container_name: aquaculture-postgres
+  # TimescaleDB Database
+  timescaledb:
+    image: timescale/timescaledb:2.13.0-pg15
+    container_name: agricultural-timescaledb
     environment:
-      POSTGRES_USER: aquaculture
-      POSTGRES_PASSWORD: aquaculture123
-      POSTGRES_DB: aquaculture_db
+      POSTGRES_USER: agricultural_iot
+      POSTGRES_PASSWORD: agricultural_iot123
+      POSTGRES_DB: agricultural_iot_db
+      TIMESCALEDB_TELEMETRY: "off"
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./infrastructure/docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/init-timescaledb.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aquaculture"]
+      test: ["CMD-SHELL", "pg_isready -U agricultural_iot"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - aquaculture-network
+      - agricultural-network
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: aquaculture-redis
+    container_name: agricultural-redis
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -37,21 +38,21 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - aquaculture-network
+      - agricultural-network
 
   # Kafka (with Zookeeper)
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
-    container_name: aquaculture-zookeeper
+    container_name: agricultural-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
-      - aquaculture-network
+      - agricultural-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: aquaculture-kafka
+    container_name: agricultural-kafka
     depends_on:
       - zookeeper
     ports:
@@ -63,7 +64,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
     networks:
-      - aquaculture-network
+      - agricultural-network
 
   # API Service
   api:
@@ -72,14 +73,14 @@ services:
       dockerfile: infrastructure/docker/Dockerfile.api
     container_name: aquaculture-api
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      - DATABASE_URL=postgresql://agricultural_iot:agricultural_iot123@timescaledb:5432/agricultural_iot_db
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - ENVIRONMENT=development
@@ -88,7 +89,7 @@ services:
       - ./services/api:/app/services/api
       - ./data:/app/data
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
 
   # ML Service
@@ -98,14 +99,14 @@ services:
       dockerfile: infrastructure/docker/Dockerfile.ml
     container_name: aquaculture-ml
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      - DATABASE_URL=postgresql://agricultural_iot:agricultural_iot123@timescaledb:5432/agricultural_iot_db
       - REDIS_URL=redis://redis:6379/0
       - MODEL_PATH=/app/models/fish_classifier.pth
       - BATCH_SIZE=32
@@ -114,7 +115,7 @@ services:
       - ./data/models:/app/models
       - ./data:/app/data
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
     # Uncomment for GPU support
     # deploy:
@@ -141,7 +142,7 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--web.enable-lifecycle'
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
 
   # Grafana
@@ -161,7 +162,7 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
       - grafana_data:/var/lib/grafana
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
 
   # Worker Service (Celery)
@@ -172,21 +173,21 @@ services:
     container_name: aquaculture-worker
     command: celery -A services.worker.celery_app worker --loglevel=info
     depends_on:
-      postgres:
+      timescaledb:
         condition: service_healthy
       redis:
         condition: service_healthy
       kafka:
         condition: service_started
     environment:
-      - DATABASE_URL=postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db
+      - DATABASE_URL=postgresql://agricultural_iot:agricultural_iot123@timescaledb:5432/agricultural_iot_db
       - REDIS_URL=redis://redis:6379/0
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     volumes:
       - ./services/worker:/app/services/worker
       - ./data:/app/data
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
 
   # Frontend Service
@@ -202,15 +203,15 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     networks:
-      - aquaculture-network
+      - agricultural-network
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  timescaledb_data:
   redis_data:
   prometheus_data:
   grafana_data:
 
 networks:
-  aquaculture-network:
+  agricultural-network:
     driver: bridge

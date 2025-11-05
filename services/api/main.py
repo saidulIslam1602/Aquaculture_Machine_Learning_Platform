@@ -8,8 +8,9 @@ import logging
 
 from .core.config import settings
 from .core.database import init_db
+from .core.timescaledb import initialize_timescaledb
 from .core.redis_client import close_redis
-from .routes import auth, health, tasks, metrics
+from .routes import auth, health, tasks, metrics, livestock
 from .routes.ml import inference as ml_inference
 from .middleware.error_handlers import (
     api_exception_handler,
@@ -71,6 +72,7 @@ app.include_router(auth.router, prefix=settings.API_V1_PREFIX)
 app.include_router(ml_inference.router, prefix=settings.API_V1_PREFIX)
 app.include_router(tasks.router, prefix=settings.API_V1_PREFIX)
 app.include_router(metrics.router, prefix=settings.API_V1_PREFIX)
+app.include_router(livestock.router, prefix=settings.API_V1_PREFIX)
 
 
 @app.on_event("startup")
@@ -83,6 +85,13 @@ async def startup_event():
     try:
         init_db()
         logger.info("Database initialized successfully")
+        
+        # Initialize TimescaleDB
+        if initialize_timescaledb():
+            logger.info("TimescaleDB initialized successfully")
+        else:
+            logger.warning("TimescaleDB initialization failed")
+            
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
 

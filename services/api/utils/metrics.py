@@ -1,199 +1,387 @@
 """
-Performance Metrics Module
+API Metrics Tracking Utilities
 
-Tracks and calculates actual performance metrics for the application.
+This module provides decorators and utilities for tracking API performance metrics
+including request latency, throughput, error rates, and custom business metrics.
 
 Industry Standards:
-    - Prometheus metrics integration
-    - Percentile calculations (p50, p95, p99)
-    - Sliding window for recent metrics
+    - Prometheus-compatible metrics
+    - Non-blocking metric collection
+    - Proper error handling
+    - Performance optimization
     - Thread-safe operations
-    - Memory-efficient storage
 """
 
-from typing import List, Dict, Any
-from collections import deque
-from threading import Lock
 import time
-import statistics
+import functools
+from typing import Dict, Any, Callable, Optional
+from datetime import datetime
+import logging
+from prometheus_client import Counter, Histogram, Gauge, Summary
+
+logger = logging.getLogger(__name__)
+
+# Prometheus metrics
+REQUEST_COUNT = Counter(
+    'api_requests_total',
+    'Total number of API requests',
+    ['method', 'endpoint', 'status_code']
+)
+
+REQUEST_DURATION = Histogram(
+    'api_request_duration_seconds',
+    'API request duration in seconds',
+    ['method', 'endpoint']
+)
+
+ACTIVE_CONNECTIONS = Gauge(
+    'api_active_connections',
+    'Number of active API connections'
+)
+
+ERROR_COUNT = Counter(
+    'api_errors_total',
+    'Total number of API errors',
+    ['error_type', 'endpoint']
+)
+
+# Agricultural IoT specific metrics
+TELEMETRY_INGESTION_RATE = Counter(
+    'telemetry_data_ingested_total',
+    'Total telemetry data points ingested',
+    ['entity_type', 'sensor_type']
+)
+
+HEALTH_ALERTS_GENERATED = Counter(
+    'health_alerts_generated_total',
+    'Total health alerts generated',
+    ['severity', 'alert_type']
+)
+
+FENCE_VIOLATIONS = Counter(
+    'fence_violations_total',
+    'Total fence violations detected',
+    ['violation_type', 'severity']
+)
+
+DATA_QUALITY_SCORE = Gauge(
+    'data_quality_score',
+    'Current data quality score',
+    ['entity_id', 'sensor_type']
+)
+
+ANIMAL_COUNT = Gauge(
+    'active_animals_total',
+    'Total number of active animals being monitored',
+    ['farm_id', 'species']
+)
 
 
-class PerformanceMetrics:
+def track_api_metrics(func: Callable) -> Callable:
     """
-    Performance Metrics Tracker
-
-    Tracks request latencies, throughput, and error rates with
-    sliding window for real-time metrics.
-
-    Features:
-        - Percentile calculations (p50, p95, p99)
-        - Throughput tracking (requests/second)
-        - Error rate monitoring
-        - Memory-efficient circular buffer
-        - Thread-safe operations
-
-    Example:
-        >>> metrics = PerformanceMetrics()
-        >>> metrics.record_request(45.2, success=True)
-        >>> stats = metrics.get_stats()
-        >>> print(f"p95 latency: {stats['latency_p95_ms']}ms")
+    Decorator to track API endpoint metrics.
+    
+    Tracks request count, duration, and error rates for API endpoints.
+    
+    Args:
+        func: FastAPI route function to track
+        
+    Returns:
+        Wrapped function with metrics tracking
     """
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        start_time = time.time()
+        method = "unknown"
+        endpoint = func.__name__
+        status_code = 200
+        
+        try:
+            # Extract request information if available
+            if 'request' in kwargs:
+                request = kwargs['request']
+                method = request.method
+                endpoint = request.url.path
+            
+            # Increment active connections
+            ACTIVE_CONNECTIONS.inc()
+            
+            # Execute the function
+            result = await func(*args, **kwargs)
+            
+            return result
+            
+        except Exception as e:
+            status_code = getattr(e, 'status_code', 500)
+            ERROR_COUNT.labels(
+                error_type=type(e).__name__,
+                endpoint=endpoint
+            ).inc()
+            raise
+            
+        finally:
+            # Record metrics
+            duration = time.time() - start_time
+            
+            REQUEST_COUNT.labels(
+                method=method,
+                endpoint=endpoint,
+                status_code=status_code
+            ).inc()
+            
+            REQUEST_DURATION.labels(
+                method=method,
+                endpoint=endpoint
+            ).observe(duration)
+            
+            ACTIVE_CONNECTIONS.dec()
+    
+    return wrapper
 
-    def __init__(self, window_size: int = 10000):
+
+def track_telemetry_ingestion(
+    entity_type: str,
+    sensor_type: str,
+    data_points: int = 1
+) -> None:
+    """
+    Track telemetry data ingestion metrics.
+    
+    Args:
+        entity_type: Type of entity (livestock, aquaculture, etc.)
+        sensor_type: Type of sensor (collar, tank_sensor, etc.)
+        data_points: Number of data points ingested
+    """
+    try:
+        TELEMETRY_INGESTION_RATE.labels(
+            entity_type=entity_type,
+            sensor_type=sensor_type
+        ).inc(data_points)
+    except Exception as e:
+        logger.error(f"Failed to track telemetry ingestion: {e}")
+
+
+def track_health_alert(severity: str, alert_type: str) -> None:
+    """
+    Track health alert generation.
+    
+    Args:
+        severity: Alert severity (low, medium, high, critical)
+        alert_type: Type of alert (health_anomaly, behavior_change, etc.)
+    """
+    try:
+        HEALTH_ALERTS_GENERATED.labels(
+            severity=severity,
+            alert_type=alert_type
+        ).inc()
+    except Exception as e:
+        logger.error(f"Failed to track health alert: {e}")
+
+
+def track_fence_violation(violation_type: str, severity: str) -> None:
+    """
+    Track fence violation events.
+    
+    Args:
+        violation_type: Type of violation (entry, exit, breach)
+        severity: Violation severity (low, medium, high, critical)
+    """
+    try:
+        FENCE_VIOLATIONS.labels(
+            violation_type=violation_type,
+            severity=severity
+        ).inc()
+    except Exception as e:
+        logger.error(f"Failed to track fence violation: {e}")
+
+
+def update_data_quality_score(
+    entity_id: str,
+    sensor_type: str,
+    quality_score: float
+) -> None:
+    """
+    Update data quality score metric.
+    
+    Args:
+        entity_id: Entity identifier
+        sensor_type: Type of sensor
+        quality_score: Quality score (0.0 to 1.0)
+    """
+    try:
+        DATA_QUALITY_SCORE.labels(
+            entity_id=entity_id,
+            sensor_type=sensor_type
+        ).set(quality_score)
+    except Exception as e:
+        logger.error(f"Failed to update data quality score: {e}")
+
+
+def update_animal_count(farm_id: str, species: str, count: int) -> None:
+    """
+    Update active animal count metric.
+    
+    Args:
+        farm_id: Farm identifier
+        species: Animal species
+        count: Number of active animals
+    """
+    try:
+        ANIMAL_COUNT.labels(
+            farm_id=farm_id,
+            species=species
+        ).set(count)
+    except Exception as e:
+        logger.error(f"Failed to update animal count: {e}")
+
+
+class MetricsCollector:
+    """
+    Centralized metrics collection and reporting.
+    
+    Provides methods for collecting and aggregating various
+    platform metrics for monitoring and alerting.
+    """
+    
+    def __init__(self):
+        self.custom_metrics: Dict[str, Any] = {}
+        
+    def collect_system_metrics(self) -> Dict[str, Any]:
         """
-        Initialize Performance Metrics
-
-        Args:
-            window_size: Number of recent requests to track
-        """
-        self.window_size = window_size
-
-        # Circular buffers for metrics (memory-efficient)
-        self.latencies: deque = deque(maxlen=window_size)
-        self.timestamps: deque = deque(maxlen=window_size)
-        self.successes: deque = deque(maxlen=window_size)
-
-        # Counters
-        self.total_requests = 0
-        self.total_errors = 0
-        self.start_time = time.time()
-
-        # Thread safety
-        self.lock = Lock()
-
-    def record_request(self, latency_ms: float, success: bool = True) -> None:
-        """
-        Record Request Metrics
-
-        Records latency and success status for a request.
-
-        Args:
-            latency_ms: Request latency in milliseconds
-            success: Whether request succeeded
-
-        Note:
-            Uses circular buffer - automatically drops old entries
-            when window size is exceeded.
-        """
-        with self.lock:
-            self.latencies.append(latency_ms)
-            self.timestamps.append(time.time())
-            self.successes.append(success)
-
-            self.total_requests += 1
-            if not success:
-                self.total_errors += 1
-
-    def get_percentile(self, data: List[float], percentile: float) -> float:
-        """
-        Calculate Percentile
-
-        Calculates specified percentile from data.
-
-        Args:
-            data: List of values
-            percentile: Percentile to calculate (0-100)
-
+        Collect system-level metrics.
+        
         Returns:
-            float: Percentile value
-
-        Algorithm:
-            Uses linear interpolation between closest ranks
+            Dict with system metrics
         """
-        if not data:
-            return 0.0
-
-        sorted_data = sorted(data)
-        index = (len(sorted_data) - 1) * (percentile / 100)
-
-        if index.is_integer():
-            return sorted_data[int(index)]
-        else:
-            lower = sorted_data[int(index)]
-            upper = sorted_data[int(index) + 1]
-            return lower + (upper - lower) * (index - int(index))
-
-    def get_stats(self) -> Dict[str, Any]:
-        """
-        Get Performance Statistics
-
-        Calculates comprehensive performance metrics.
-
-        Returns:
-            Dict containing:
-                - latency_mean_ms: Average latency
-                - latency_p50_ms: Median latency
-                - latency_p95_ms: 95th percentile latency
-                - latency_p99_ms: 99th percentile latency
-                - throughput_rps: Requests per second
-                - error_rate: Percentage of failed requests
-                - total_requests: Total requests processed
-                - window_size: Current window size
-
-        Example:
-            >>> stats = metrics.get_stats()
-            >>> print(f"p95: {stats['latency_p95_ms']:.2f}ms")
-            >>> print(f"Throughput: {stats['throughput_rps']:.2f} req/s")
-        """
-        with self.lock:
-            if not self.latencies:
-                return {
-                    "latency_mean_ms": 0.0,
-                    "latency_p50_ms": 0.0,
-                    "latency_p95_ms": 0.0,
-                    "latency_p99_ms": 0.0,
-                    "throughput_rps": 0.0,
-                    "error_rate": 0.0,
-                    "total_requests": 0,
-                    "window_size": 0,
-                }
-
-            latencies_list = list(self.latencies)
-
-            # Calculate latency percentiles
-            latency_mean = statistics.mean(latencies_list)
-            latency_p50 = self.get_percentile(latencies_list, 50)
-            latency_p95 = self.get_percentile(latencies_list, 95)
-            latency_p99 = self.get_percentile(latencies_list, 99)
-
-            # Calculate throughput (requests per second)
-            # Use recent window for accurate current throughput
-            if len(self.timestamps) > 1:
-                time_window = self.timestamps[-1] - self.timestamps[0]
-                if time_window > 0:
-                    throughput = len(self.timestamps) / time_window
-                else:
-                    throughput = 0.0
-            else:
-                throughput = 0.0
-
-            # Calculate error rate
-            error_count = sum(1 for s in self.successes if not s)
-            error_rate = error_count / len(self.successes) if self.successes else 0.0
-
+        try:
             return {
-                "latency_mean_ms": round(latency_mean, 2),
-                "latency_p50_ms": round(latency_p50, 2),
-                "latency_p95_ms": round(latency_p95, 2),
-                "latency_p99_ms": round(latency_p99, 2),
-                "throughput_rps": round(throughput, 2),
-                "error_rate": round(error_rate, 4),
-                "total_requests": self.total_requests,
-                "total_errors": self.total_errors,
-                "window_size": len(self.latencies),
-                "uptime_seconds": round(time.time() - self.start_time, 2),
+                "timestamp": datetime.utcnow().isoformat(),
+                "active_connections": ACTIVE_CONNECTIONS._value._value,
+                "total_requests": sum(
+                    sample.value for sample in REQUEST_COUNT.collect()[0].samples
+                ),
+                "total_errors": sum(
+                    sample.value for sample in ERROR_COUNT.collect()[0].samples
+                ),
+                "telemetry_ingestion_rate": sum(
+                    sample.value for sample in TELEMETRY_INGESTION_RATE.collect()[0].samples
+                ),
+                "health_alerts_generated": sum(
+                    sample.value for sample in HEALTH_ALERTS_GENERATED.collect()[0].samples
+                ),
+                "fence_violations": sum(
+                    sample.value for sample in FENCE_VIOLATIONS.collect()[0].samples
+                )
             }
+        except Exception as e:
+            logger.error(f"Failed to collect system metrics: {e}")
+            return {"error": str(e)}
+    
+    def collect_performance_metrics(self) -> Dict[str, Any]:
+        """
+        Collect performance metrics.
+        
+        Returns:
+            Dict with performance metrics
+        """
+        try:
+            # Get request duration histogram data
+            duration_samples = REQUEST_DURATION.collect()[0].samples
+            
+            # Calculate percentiles (simplified)
+            durations = [sample.value for sample in duration_samples if sample.name.endswith('_sum')]
+            counts = [sample.value for sample in duration_samples if sample.name.endswith('_count')]
+            
+            avg_duration = sum(durations) / sum(counts) if sum(counts) > 0 else 0
+            
+            return {
+                "timestamp": datetime.utcnow().isoformat(),
+                "average_response_time_seconds": avg_duration,
+                "total_request_duration_seconds": sum(durations),
+                "total_requests_processed": sum(counts),
+                "requests_per_second": sum(counts) / 3600 if sum(counts) > 0 else 0  # Approximate
+            }
+        except Exception as e:
+            logger.error(f"Failed to collect performance metrics: {e}")
+            return {"error": str(e)}
+    
+    def collect_business_metrics(self) -> Dict[str, Any]:
+        """
+        Collect business-specific metrics.
+        
+        Returns:
+            Dict with business metrics
+        """
+        try:
+            # Get animal count data
+            animal_samples = ANIMAL_COUNT.collect()[0].samples
+            total_animals = sum(sample.value for sample in animal_samples)
+            
+            # Get data quality scores
+            quality_samples = DATA_QUALITY_SCORE.collect()[0].samples
+            avg_quality = (
+                sum(sample.value for sample in quality_samples) / len(quality_samples)
+                if quality_samples else 0
+            )
+            
+            return {
+                "timestamp": datetime.utcnow().isoformat(),
+                "total_active_animals": total_animals,
+                "average_data_quality_score": avg_quality,
+                "farms_monitored": len(set(
+                    sample.labels.get('farm_id', '') 
+                    for sample in animal_samples
+                )),
+                "species_monitored": len(set(
+                    sample.labels.get('species', '') 
+                    for sample in animal_samples
+                ))
+            }
+        except Exception as e:
+            logger.error(f"Failed to collect business metrics: {e}")
+            return {"error": str(e)}
+    
+    def get_all_metrics(self) -> Dict[str, Any]:
+        """
+        Get all collected metrics.
+        
+        Returns:
+            Dict with all metrics categories
+        """
+        return {
+            "system": self.collect_system_metrics(),
+            "performance": self.collect_performance_metrics(),
+            "business": self.collect_business_metrics(),
+            "custom": self.custom_metrics.copy()
+        }
+    
+    def add_custom_metric(self, name: str, value: Any, labels: Optional[Dict[str, str]] = None) -> None:
+        """
+        Add a custom metric.
+        
+        Args:
+            name: Metric name
+            value: Metric value
+            labels: Optional labels for the metric
+        """
+        try:
+            metric_key = f"{name}_{datetime.utcnow().timestamp()}"
+            self.custom_metrics[metric_key] = {
+                "name": name,
+                "value": value,
+                "labels": labels or {},
+                "timestamp": datetime.utcnow().isoformat()
+            }
+            
+            # Keep only recent custom metrics (last 1000)
+            if len(self.custom_metrics) > 1000:
+                oldest_keys = sorted(self.custom_metrics.keys())[:100]
+                for key in oldest_keys:
+                    del self.custom_metrics[key]
+                    
+        except Exception as e:
+            logger.error(f"Failed to add custom metric: {e}")
 
-    def reset(self) -> None:
-        """Reset all metrics"""
-        with self.lock:
-            self.latencies.clear()
-            self.timestamps.clear()
-            self.successes.clear()
-            self.total_requests = 0
-            self.total_errors = 0
-            self.start_time = time.time()
 
-
-# Global metrics instance
-performance_metrics = PerformanceMetrics(window_size=10000)
+# Global metrics collector instance
+metrics_collector = MetricsCollector()
