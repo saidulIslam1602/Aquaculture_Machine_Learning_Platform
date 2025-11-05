@@ -1,8 +1,21 @@
+# ================================================================================
+# Git Ignore Configuration for Aquaculture ML Platform
+# ================================================================================
+# This file specifies intentionally untracked files that Git should ignore.
+# It follows industry best practices for Python, Docker, and data engineering projects.
+
+# ================================================================================
 # Python
+# ================================================================================
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# C extensions
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -16,82 +29,413 @@ parts/
 sdist/
 var/
 wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
-venv/
-env/
-ENV/
 
-# PyTorch
-*.pth
-*.pt
-*.onnx
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+junit.xml
+junit-*.xml
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-*.ipynb
 
-# Environment
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
 .env
-.env.local
-.env.*.local
-*.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
+# Spyder project settings
+.spyderproject
+.spyproject
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.hypothesis/
+# Rope project settings
+.ropeproject
 
-# Logs
-*.log
-logs/
+# mkdocs documentation
+/site
 
-# Database
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# ================================================================================
+# Data Engineering & Analytics
+# ================================================================================
+# Data files (should not be committed to version control)
+*.csv
+*.json
+*.parquet
+*.avro
+*.orc
+*.xlsx
+*.xls
+data/
+datasets/
+raw_data/
+processed_data/
+output/
+exports/
+
+# Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# Data
-data/raw/*
-data/processed/*
-!data/raw/.gitkeep
-!data/processed/.gitkeep
+# Airflow
+airflow.cfg
+airflow_login.py
+logs/
+dags/__pycache__/
+plugins/__pycache__/
+webserver_config.py
 
-# Models
-models/*.pth
-models/*.pt
-!models/.gitkeep
+# dbt
+dbt_packages/
+target/
+logs/
+.user.yml
+profiles.yml
 
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Kafka
+kafka-logs/
+
+# ================================================================================
+# Machine Learning
+# ================================================================================
+# Model files
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+*.onnx
+*.pb
+*.pth
+*.pt
+models/
+checkpoints/
+experiments/
+mlruns/
+wandb/
+
+# Jupyter notebooks (checkpoints)
+.ipynb_checkpoints/
+
+# TensorBoard logs
+runs/
+tensorboard_logs/
+
+# ================================================================================
+# Infrastructure & DevOps
+# ================================================================================
 # Docker
 .dockerignore
+docker-compose.override.yml
+.docker/
+
+# Kubernetes
+*.kubeconfig
+kubeconfig
+secrets.yaml
+*-secret.yaml
 
 # Terraform
 *.tfstate
 *.tfstate.*
 .terraform/
+.terraform.lock.hcl
+terraform.tfvars
 *.tfvars
 
-# Kubernetes
-secrets.yaml
+# Ansible
+*.retry
+.vault_pass
 
-# Monitoring
-monitoring/grafana/data/
-monitoring/prometheus/data/
+# Vagrant
+.vagrant/
 
-# Misc
-.cache/
+# ================================================================================
+# IDE & Editor Files
+# ================================================================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ================================================================================
+# Operating System Files
+# ================================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.tmp
+*.temp
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ================================================================================
+# Security & Credentials
+# ================================================================================
+# Environment variables and secrets
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+config/secrets/
+
+# API keys and tokens
+api_keys.txt
+tokens.txt
+*.token
+
+# Database credentials
+database.ini
+db_config.ini
+
+# ================================================================================
+# Monitoring & Logging
+# ================================================================================
+# Log files
+*.log
+logs/
+log/
+*.out
+*.err
+
+# Prometheus
+prometheus_data/
+
+# Grafana
+grafana_data/
+
+# ================================================================================
+# Build & Deployment Artifacts
+# ================================================================================
+# Build outputs
+build/
+dist/
+*.tar.gz
+*.zip
+*.war
+*.jar
+
+# Deployment artifacts
+deployment/
+releases/
+artifacts/
+
+# ================================================================================
+# Temporary & Cache Files
+# ================================================================================
+# Temporary files
 tmp/
 temp/
 *.tmp
+*.temp
+*.cache
+
+# Cache directories
+.cache/
+cache/
+.pytest_cache/
+.mypy_cache/
+
+# ================================================================================
+# Project-Specific Exclusions
+# ================================================================================
+# Aquaculture ML Platform specific files to ignore
+
+# Local development overrides
+docker-compose.local.yml
+local_config.py
+dev_settings.py
+
+# Test data and fixtures
+test_data/
+fixtures/
+sample_data/
+
+# Documentation builds
+docs/build/
+docs/_build/
+
+# Performance test results
+performance_results/
+load_test_results/
+
+# Backup files
+*.backup
+*.bak
+backup/
+
+# IDE project files
+.project
+.pydevproject
+.settings/
+
+# OS generated files
+.DS_Store?
+Icon?
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+
+# Security scan results
+security_reports/
+vulnerability_scans/
+
+# Local Jenkins workspace (if running locally)
+jenkins_home/
+.jenkins/
+
+# Local Kubernetes configs
+local-kubeconfig
+dev-kubeconfig

@@ -1,0 +1,103 @@
+# =============================================================================
+# KUBERNETES RBAC CONFIGURATION FOR JENKINS
+# =============================================================================
+#
+# WHAT IS THIS FILE?
+# This file sets up Role-Based Access Control (RBAC) for Jenkins in Kubernetes.
+# It defines what Jenkins is allowed to do within the Kubernetes cluster.
+#
+# THINK OF IT AS SECURITY PERMISSIONS:
+# Just like how a building has different access cards for different areas,
+# this file gives Jenkins the right "access card" to perform deployments.
+#
+# THE THREE COMPONENTS:
+# 1. ServiceAccount: Creates an identity for Jenkins (like a user account)
+# 2. ClusterRole: Defines what permissions are available (like a job description)
+# 3. ClusterRoleBinding: Connects the identity to the permissions (like assigning the job)
+#
+# WHY JENKINS NEEDS THESE PERMISSIONS:
+# - Deploy applications (create/update deployments)
+# - Manage configuration (secrets, configmaps)
+# - Monitor deployments (check pod status, read logs)
+# - Expose services (create services and ingresses)
+#
+# AUTHOR: DevOps Team
+# VERSION: 1.0.0
+# UPDATED: 2024-10-26
+# =============================================================================
+
+# =============================================================================
+# SERVICE ACCOUNT - JENKINS IDENTITY IN KUBERNETES
+# =============================================================================
+# Creates a special user account for Jenkins to use when connecting to Kubernetes
+# This is like creating a "jenkins" user account on the cluster
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: jenkins                    # Name of the service account
+  namespace: default               # Kubernetes namespace where Jenkins runs
+
+---
+
+# =============================================================================
+# CLUSTER ROLE - PERMISSIONS DEFINITION
+# =============================================================================
+# Defines what actions Jenkins is allowed to perform across the entire cluster
+# This is like a job description listing all the allowed tasks
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: jenkins                    # Name of the role
+rules:
+# Pod Management - Jenkins needs to manage application containers
+- apiGroups: [""]                  # Core Kubernetes API group
+  resources: ["pods", "pods/exec", "pods/log", "pods/portforward"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+# Configuration Management - Jenkins needs to handle app configuration
+- apiGroups: [""]                  # Core Kubernetes API group  
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "create", "update", "delete"]
+
+# Application Deployment - Jenkins needs to deploy and update applications
+- apiGroups: ["apps"]              # Apps API group (for deployments)
+  resources: ["deployments", "replicasets"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+# Service Management - Jenkins needs to expose applications
+- apiGroups: [""]                  # Core Kubernetes API group
+  resources: ["services"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+# Ingress Management - Jenkins needs to configure external access
+- apiGroups: ["extensions", "networking.k8s.io"]  # Networking API groups
+  resources: ["ingresses"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+
+# Namespace Access - Jenkins needs to see available namespaces
+- apiGroups: [""]                  # Core Kubernetes API group
+  resources: ["namespaces"]
+  verbs: ["get", "list"]           # Read-only access to namespaces
+
+---
+
+# =============================================================================
+# CLUSTER ROLE BINDING - CONNECTING IDENTITY TO PERMISSIONS
+# =============================================================================
+# Links the Jenkins service account to the permissions defined in the ClusterRole
+# This is like officially assigning the job role to the jenkins user
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: jenkins                    # Name of the binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: jenkins                    # Reference to the ClusterRole defined above
+subjects:
+- kind: ServiceAccount
+  name: jenkins                    # Reference to the ServiceAccount defined above
+  namespace: default               # Namespace where the ServiceAccount exists

@@ -1,24 +1,72 @@
 """
+================================================================================
 PySpark Batch Processing Pipeline for Agricultural IoT Data
+================================================================================
 
-This module provides comprehensive batch processing capabilities for large-scale
-agricultural IoT data using Apache Spark. It includes data transformation,
-aggregation, feature engineering, and analytics processing.
+Purpose:
+This module provides enterprise-grade batch processing capabilities for large-scale
+agricultural and aquaculture IoT data using Apache Spark. It implements advanced
+analytics, feature engineering, and data lake operations optimized for agricultural
+use cases including livestock monitoring, aquaculture management, and precision farming.
 
-Key Features:
-- Scalable batch processing with PySpark
-- Advanced agricultural analytics and aggregations
-- Feature engineering for ML models
-- Data lake integration with Delta Lake
-- Performance optimization and partitioning
-- Comprehensive error handling and monitoring
+Business Value:
+- Enables large-scale analysis of historical agricultural data
+- Supports ML model training with engineered features
+- Provides insights for operational optimization and decision making
+- Facilitates regulatory reporting and compliance analytics
+- Enables predictive analytics for livestock health and aquaculture conditions
 
-Industry Standards:
-- Spark SQL optimization
-- Delta Lake ACID transactions
-- Proper resource management
-- Data quality validation
-- Incremental processing patterns
+Technical Architecture:
+- Built on Apache Spark 3.5+ for distributed processing
+- Integrates with Delta Lake for ACID transactions and time travel
+- Implements medallion architecture (bronze, silver, gold layers)
+- Uses advanced Spark SQL optimizations and catalyst optimizer
+- Supports both batch and micro-batch processing patterns
+- Includes comprehensive monitoring and performance tuning
+
+Key Processing Capabilities:
+1. Data Ingestion: Multi-source data loading with schema validation
+2. Data Cleansing: Advanced data quality checks and anomaly detection
+3. Feature Engineering: Agricultural-specific feature creation for ML models
+4. Aggregations: Time-series aggregations and statistical computations
+5. Analytics: Advanced agricultural analytics and KPI calculations
+6. Data Lake Operations: Efficient data lake management with Delta Lake
+
+Agricultural Domain Features:
+- Livestock health scoring and behavioral analysis
+- Aquaculture water quality monitoring and optimization
+- Environmental correlation analysis (weather, soil, water conditions)
+- Feed efficiency and growth rate calculations
+- Disease outbreak detection and prevention analytics
+- Geospatial analysis for virtual fencing and territory management
+
+Performance Optimizations:
+- Adaptive query execution (AQE) for dynamic optimization
+- Columnar storage with Parquet and Delta Lake formats
+- Intelligent partitioning strategies for time-series data
+- Broadcast joins for dimension tables
+- Z-ordering for improved query performance
+- Caching strategies for iterative computations
+
+Data Quality Assurance:
+- Schema enforcement and evolution management
+- Data validation rules specific to agricultural metrics
+- Outlier detection for sensor readings and measurements
+- Completeness and consistency checks across data sources
+- Automated data profiling and quality reporting
+
+Security & Compliance:
+- Column-level encryption for sensitive agricultural data
+- Access control integration with enterprise security systems
+- Audit logging for data lineage and compliance reporting
+- GDPR compliance for farmer and livestock data
+- Data masking and anonymization capabilities
+
+Author: Data Engineering Team
+Version: 2.1.0
+Last Updated: 2024-11-05
+Dependencies: PySpark 3.5+, Delta Lake 3.0+, MLlib
+Cluster Requirements: Minimum 4 cores, 16GB RAM per executor
 """
 
 import logging

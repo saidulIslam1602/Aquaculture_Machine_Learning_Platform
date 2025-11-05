@@ -1,8 +1,37 @@
-# Kubernetes Deployment Manifests
-# Production-grade deployment configuration for aquaculture ML platform
+# =============================================================================
+# Kubernetes Deployment Manifests - Aquaculture ML Platform
+# =============================================================================
+#
+# This file contains production-grade Kubernetes deployment configurations
+# for the Aquaculture Machine Learning Platform. It defines all necessary
+# resources for running the platform in a Kubernetes cluster.
+#
+# Components included:
+# - Namespace isolation for production environment
+# - API service deployment with high availability
+# - ML service deployment with specialized resource allocation
+# - Load balancer services for external access
+# - Horizontal Pod Autoscaler for dynamic scaling
+# - Security policies and resource constraints
+#
+# Security features:
+# - Non-root container execution
+# - Read-only root filesystems
+# - Resource limits and requests
+# - Network policies for service isolation
+# - RBAC integration for service accounts
+#
+# Monitoring integration:
+# - Prometheus metrics scraping annotations
+# - Health check endpoints configuration
+# - Readiness and liveness probes
+# - Startup probes for slow-starting services
+# =============================================================================
 
 ---
-# Namespace
+# Production Namespace
+# Creates an isolated environment for production workloads with proper labeling
+# for resource management, monitoring, and network policies
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,9 +39,13 @@ metadata:
   labels:
     name: aquaculture-prod
     environment: production
+    platform: aquaculture-ml
+    tier: production
 
 ---
 # API Service Deployment
+# High-availability deployment for the main FastAPI application service
+# Handles REST API requests, database operations, and business logic
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,13 +55,24 @@ metadata:
     app: api-service
     tier: backend
     version: v1
+    component: api
+    platform: aquaculture-ml
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+    description: "Main API service for aquaculture ML platform"
 spec:
-  replicas: 3  # High availability
+  # High availability configuration with 3 replicas
+  # Ensures service availability during node failures and maintenance
+  replicas: 3
+  
+  # Rolling update strategy for zero-downtime deployments
+  # maxSurge: 1 allows one extra pod during updates
+  # maxUnavailable: 0 ensures no pods are unavailable during updates
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 1
-      maxUnavailable: 0  # Zero-downtime deployment
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: api-service
@@ -146,6 +190,130 @@ spec:
       targetPort: 8000
       protocol: TCP
   sessionAffinity: ClientIP  # Sticky sessions
+
+---
+# ML Service Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aquaculture-ml-service
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+    tier: ml
+    version: v1
+spec:
+  replicas: 2  # ML service replicas
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ml-service
+  template:
+    metadata:
+      labels:
+        app: ml-service
+        tier: ml
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8001"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: ml-service
+          image: aquaculture-ml-platform/ml-service:latest
+          ports:
+            - containerPort: 8001
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-secret
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret
+                  key: url
+            - name: MODEL_PATH
+              value: "/app/models/fish_classifier.pth"
+            - name: BATCH_SIZE
+              value: "32"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8001
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: models-volume
+              mountPath: /app/models
+              readOnly: true
+      volumes:
+        - name: models-volume
+          persistentVolumeClaim:
+            claimName: ml-models-pvc
+
+---
+# ML Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-service
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+spec:
+  type: ClusterIP
+  selector:
+    app: ml-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+      protocol: TCP
 
 ---
 # Horizontal Pod Autoscaler

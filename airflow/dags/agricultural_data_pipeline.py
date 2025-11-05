@@ -1,22 +1,68 @@
 """
+================================================================================
 Agricultural IoT Data Pipeline - Apache Airflow DAG
+================================================================================
 
-This DAG orchestrates the complete data pipeline for agricultural IoT telemetry data,
-from ingestion through transformation to analytics warehouse loading.
+Purpose:
+This DAG orchestrates the complete end-to-end data pipeline for the Aquaculture
+Machine Learning Platform, handling IoT sensor data, livestock monitoring,
+and aquaculture analytics from ingestion to warehouse loading.
+
+Business Value:
+- Enables real-time monitoring of livestock and aquaculture operations
+- Provides data foundation for ML-driven health predictions
+- Supports regulatory compliance and audit requirements
+- Facilitates data-driven decision making for farm operations
 
 Pipeline Architecture:
-1. Data Ingestion: Extract from IoT sensors and external APIs
-2. Data Quality: Validate and clean incoming data
-3. Data Transformation: Process and enrich data using dbt
-4. Data Loading: Load to BigQuery and other destinations
-5. Data Monitoring: Track pipeline health and data quality
+1. Data Ingestion: Extract from IoT sensors, weather APIs, and external systems
+2. Data Quality: Comprehensive validation using Great Expectations framework
+3. Data Transformation: dbt-based transformations for analytics-ready datasets
+4. Data Loading: Multi-destination loading (BigQuery, TimescaleDB, data lake)
+5. Data Monitoring: Real-time pipeline health and data quality monitoring
+6. ML Pipeline: Feature engineering and model training data preparation
 
-Industry Standards:
-- Proper error handling and retry logic
-- Data quality validation at each stage
-- Comprehensive monitoring and alerting
-- Idempotent operations for reliability
-- Proper dependency management
+Technical Implementation:
+- Follows ELT pattern for modern data stack compatibility
+- Implements idempotent operations for reliable reprocessing
+- Uses task groups for logical organization and parallel execution
+- Includes comprehensive error handling and retry mechanisms
+- Supports both batch and streaming data sources
+- Integrates with monitoring and alerting systems
+
+Data Sources:
+- IoT sensor networks (temperature, humidity, pH, dissolved oxygen)
+- GPS tracking devices for livestock location monitoring
+- Weather station APIs for environmental context
+- External agricultural databases and market data
+- Manual data entry from farm management systems
+
+Data Destinations:
+- TimescaleDB: Real-time operational data and time-series analytics
+- BigQuery: Analytics data warehouse for business intelligence
+- Data Lake: Raw data storage for ML model training and experimentation
+- Redis: Caching layer for real-time dashboard applications
+- Prometheus: Metrics and monitoring data
+
+Quality Assurance:
+- Data validation at each pipeline stage
+- Schema evolution handling and backward compatibility
+- Automated data quality reporting and alerting
+- Comprehensive logging and audit trails
+- Performance monitoring and optimization
+
+Security & Compliance:
+- Encrypted data transmission and storage
+- Access control and audit logging
+- GDPR compliance for personal data handling
+- Data retention policies and automated cleanup
+- Secure credential management with Airflow Connections
+
+Author: Data Engineering Team
+Version: 2.1.0
+Last Updated: 2024-11-05
+Schedule: Every 6 hours (0 */6 * * *)
+Dependencies: TimescaleDB, BigQuery, dbt, Great Expectations
 """
 
 from datetime import datetime, timedelta

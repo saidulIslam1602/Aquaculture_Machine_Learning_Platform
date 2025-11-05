@@ -1,4 +1,32 @@
-"""Main FastAPI application"""
+"""
+Aquaculture Machine Learning Platform - Main FastAPI Application
+
+This module serves as the entry point for the FastAPI-based REST API service
+of the Aquaculture ML Platform. It configures the application with all necessary
+middleware, routes, error handlers, and integrations required for production use.
+
+Key Features:
+- RESTful API endpoints for aquaculture data management
+- Machine learning inference integration
+- Real-time monitoring and metrics collection
+- Database connectivity (PostgreSQL/TimescaleDB)
+- Redis caching and session management
+- Comprehensive error handling and logging
+- Rate limiting and security middleware
+- CORS support for frontend integration
+- Prometheus metrics instrumentation
+
+Architecture:
+The application follows a modular architecture with clear separation of concerns:
+- Core: Configuration, database, and infrastructure components
+- Routes: API endpoint definitions organized by domain
+- Middleware: Cross-cutting concerns (logging, rate limiting, error handling)
+- Models: Data models and database schemas
+- Utils: Utility functions and helper classes
+
+Author: Aquaculture ML Platform Team
+Version: 2.1.0
+"""
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,12 +34,17 @@ from fastapi.middleware.gzip import GZipMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 import logging
 
+# Core infrastructure imports
 from .core.config import settings
 from .core.database import init_db
 from .core.timescaledb import initialize_timescaledb
 from .core.redis_client import close_redis
+
+# API route imports organized by domain
 from .routes import auth, health, tasks, metrics, livestock
 from .routes.ml import inference as ml_inference
+
+# Middleware imports for cross-cutting concerns
 from .middleware.error_handlers import (
     api_exception_handler,
     validation_exception_handler,
@@ -21,6 +54,8 @@ from .middleware.error_handlers import (
 )
 from .middleware.logging_middleware import RequestLoggingMiddleware
 from .middleware.rate_limiter import RateLimitMiddleware
+
+# FastAPI and SQLAlchemy exception imports
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import SQLAlchemyError
 

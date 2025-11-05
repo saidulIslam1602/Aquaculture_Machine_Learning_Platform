@@ -1,0 +1,140 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<!-- 
+=============================================================================
+JENKINS JOB CONFIGURATION - AQUACULTURE ML PLATFORM
+=============================================================================
+
+WHAT IS THIS FILE?
+This XML file defines a Jenkins Pipeline job configuration. It tells Jenkins:
+- What parameters users can set when running the pipeline
+- Where to find the source code (Git repository)
+- Which Jenkinsfile to use for the pipeline definition
+
+THINK OF IT AS A JOB DESCRIPTION:
+Just like a job posting describes what a position does and what's required,
+this file describes what the Jenkins job does and how it should be configured.
+
+KEY SECTIONS:
+1. Job Properties: Basic job settings and parameters
+2. SCM Configuration: Where to get the source code from
+3. Pipeline Definition: Which Jenkinsfile contains the actual pipeline steps
+
+HOW IT WORKS:
+1. Jenkins reads this configuration when the job is created
+2. It creates a user interface with the defined parameters
+3. When triggered, it checks out code from the specified Git repository
+4. It then executes the pipeline defined in the Jenkinsfile
+
+AUTHOR: DevOps Team
+VERSION: 1.0.0
+UPDATED: 2024-10-26
+=============================================================================
+-->
+
+<flow-definition plugin="workflow-job">
+  <actions/>
+  <!-- Human-readable description shown in Jenkins UI -->
+  <description>Aquaculture ML Platform CI/CD Pipeline</description>
+  <!-- Don't keep dependencies between builds (standard setting) -->
+  <keepDependencies>false</keepDependencies>
+  <!-- 
+  =============================================================================
+  JOB PROPERTIES - USER CONFIGURABLE PARAMETERS
+  =============================================================================
+  These parameters create a form in Jenkins UI where users can customize
+  the pipeline behavior when manually triggering builds
+  -->
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <!-- 
+        DEPLOYMENT ENVIRONMENT SELECTOR
+        Creates a dropdown menu with deployment target options
+        -->
+        <hudson.model.ChoiceParameterDefinition>
+          <name>DEPLOYMENT_ENVIRONMENT</name>
+          <description>Target deployment environment</description>
+          <choices>
+            <string>staging</string>      <!-- Deploy to staging environment only -->
+            <string>production</string>   <!-- Deploy to production environment only -->
+            <string>both</string>         <!-- Deploy to both staging and production -->
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        
+        <!-- 
+        TEST EXECUTION CONTROL
+        Creates a checkbox to skip tests (for emergency deployments)
+        -->
+        <hudson.model.BooleanParameterDefinition>
+          <name>SKIP_TESTS</name>
+          <description>Skip test execution (emergency deployments only)</description>
+          <defaultValue>false</defaultValue>    <!-- Tests run by default -->
+        </hudson.model.BooleanParameterDefinition>
+        
+        <!-- 
+        SECURITY SCANNING CONTROL
+        Creates a checkbox to enable/disable security vulnerability scanning
+        -->
+        <hudson.model.BooleanParameterDefinition>
+          <name>ENABLE_SECURITY_SCAN</name>
+          <description>Enable security vulnerability scanning</description>
+          <defaultValue>true</defaultValue>     <!-- Security scanning enabled by default -->
+        </hudson.model.BooleanParameterDefinition>
+        
+        <!-- 
+        PRODUCTION DEPLOYMENT GATE
+        Creates a checkbox for explicit production deployment confirmation
+        -->
+        <hudson.model.BooleanParameterDefinition>
+          <name>DEPLOY_TO_PRODUCTION</name>
+          <description>Deploy to production environment</description>
+          <defaultValue>false</defaultValue>    <!-- Production deployment disabled by default -->
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <!-- 
+  =============================================================================
+  PIPELINE DEFINITION - SOURCE CODE AND SCRIPT LOCATION
+  =============================================================================
+  This section tells Jenkins where to find the source code and pipeline script
+  -->
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition">
+    <!-- 
+    =============================================================================
+    SCM (SOURCE CODE MANAGEMENT) CONFIGURATION
+    =============================================================================
+    Defines where Jenkins should get the source code from
+    -->
+    <scm class="hudson.plugins.git.GitSCM">
+      <configVersion>2</configVersion>                                    <!-- Git plugin configuration version -->
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <!-- GitHub repository URL where the source code is stored -->
+          <url>https://github.com/saidulIslam1602/Aquaculture_Machine_Learning_Platform.git</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <!-- Monitor the main branch for changes -->
+          <name>*/main</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <!-- Don't generate submodule configurations (not needed for this project) -->
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="list"/>                                        <!-- Empty submodule configuration -->
+      <extensions/>                                                       <!-- No additional Git extensions -->
+    </scm>
+    <!-- 
+    Path to the Jenkinsfile within the repository
+    This tells Jenkins which file contains the pipeline definition
+    -->
+    <scriptPath>jenkins/Jenkinsfile</scriptPath>
+    <!-- Use lightweight checkout (faster, only gets necessary files) -->
+    <lightweight>true</lightweight>
+  </definition>
+  <!-- No automatic triggers configured (manual or webhook-triggered builds only) -->
+  <triggers/>
+  <!-- Job is enabled and ready to run -->
+  <disabled>false</disabled>
+</flow-definition>

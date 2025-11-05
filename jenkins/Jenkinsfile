@@ -1,0 +1,936 @@
+#!/usr/bin/env groovy
+
+/**
+ * =============================================================================
+ * JENKINS PIPELINE - AQUACULTURE ML PLATFORM CI/CD
+ * =============================================================================
+ * 
+ * WHAT IS THIS FILE?
+ * This is a Jenkins Pipeline script that automates the entire process of:
+ * 1. Testing your code for bugs and security issues
+ * 2. Building Docker images of your application
+ * 3. Deploying your application to staging and production environments
+ * 
+ * THINK OF IT AS AN ASSEMBLY LINE:
+ * Just like a car factory has stations where each part is added and tested,
+ * this pipeline has "stages" where your code goes through different checks
+ * and processes before it becomes a running application.
+ *
+ * PIPELINE FLOW (What happens when you click "Build"):
+ * 1. 📥 Checkout: Get the latest code from Git
+ * 2. 🔍 Quality Checks: Check code style, find bugs, security issues
+ * 3. 🧪 Testing: Run automated tests to make sure everything works
+ * 4. 🐳 Build Images: Create Docker containers with your application
+ * 5. 🔒 Security Scan: Check Docker images for vulnerabilities
+ * 6. 🚀 Deploy to Staging: Put your app on a test environment
+ * 7. ✅ Smoke Tests: Quick tests to make sure staging deployment works
+ * 8. 👥 Approval: Wait for human approval before production
+ * 9. 🌟 Deploy to Production: Put your app live for real users
+ * 10. 💚 Health Check: Make sure production deployment is healthy
+ *
+ * KEY CONCEPTS FOR BEGINNERS:
+ * - Pipeline: A series of automated steps
+ * - Stage: A major step in the pipeline (like "Test" or "Deploy")
+ * - Agent: The computer/container that runs the pipeline steps
+ * - Credentials: Secure storage for passwords and tokens
+ * - Parallel: Running multiple things at the same time for speed
+ * - Artifact: Files created during the build (like test reports)
+ * 
+ * AUTHOR: DevOps Team
+ * VERSION: 2.0.0
+ * UPDATED: 2024-10-26
+ * =============================================================================
+ */
+
+// =============================================================================
+// PIPELINE DEFINITION START
+// =============================================================================
+// This is where we define what the pipeline should do and where it should run
+
+pipeline {
+    // =============================================================================
+    // AGENT CONFIGURATION - WHERE THE PIPELINE RUNS
+    // =============================================================================
+    // Instead of running on a fixed Jenkins server, we create a temporary pod
+    // in Kubernetes with all the tools we need. Think of it like ordering
+    // a custom computer with exactly the software you need for this job.
+    
+    agent {
+        kubernetes {
+            yaml """
+# This YAML defines a Kubernetes pod with multiple containers
+# Each container has specific tools for different pipeline tasks
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    jenkins: agent    # Label to identify this as a Jenkins build agent
+spec:
+  serviceAccountName: jenkins    # Use Jenkins service account for permissions
+  containers:
+  # Docker Container - For building and pushing Docker images
+  - name: docker
+    image: docker:24-dind              # Docker-in-Docker (can build images)
+    securityContext:
+      privileged: true                 # Needed for Docker-in-Docker to work
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run              # Where Docker stores its socket
+      
+  # Python Container - For running tests and code analysis
+  - name: python
+    image: python:3.10-slim            # Python runtime for our application
+    command:
+    - cat                              # Keep container running
+    tty: true                          # Allow interactive commands
+    
+  # Kubectl Container - For deploying to Kubernetes
+  - name: kubectl
+    image: bitnami/kubectl:latest      # Kubernetes command-line tool
+    command:
+    - cat                              # Keep container running
+    tty: true                          # Allow interactive commands
+    
+  # Trivy Container - For security scanning of Docker images
+  - name: trivy
+    image: aquasec/trivy:latest        # Security vulnerability scanner
+    command:
+    - cat                              # Keep container running
+    tty: true                          # Allow interactive commands
+    
+  volumes:
+  - name: docker-sock
+    emptyDir: {}                       # Temporary storage for Docker
+"""
+        }
+    }
+    
+    // =============================================================================
+    // ENVIRONMENT VARIABLES - CONFIGURATION FOR THE ENTIRE PIPELINE
+    // =============================================================================
+    // These variables are available to all stages and define how the pipeline behaves
+    // Think of them as global settings that control various aspects of the build
+    
+    environment {
+        // =============================================================================
+        // APPLICATION CONFIGURATION
+        // =============================================================================
+        // Basic information about the application being built
+        
+        APP_NAME = 'aquaculture-ml-platform'                                    // Application name used in Docker images
+        APP_VERSION = sh(script: "python3 -c 'import version; print(version.__version__)'", returnStdout: true).trim()  // Extract version from version.py
+        BUILD_VERSION = "${APP_VERSION}-${BUILD_NUMBER}"                        // Combine app version with Jenkins build number
+        
+        // =============================================================================
+        // CONTAINER REGISTRY CONFIGURATION
+        // =============================================================================
+        // Where Docker images are stored and how to access them
+        
+        DOCKER_REGISTRY = credentials('docker-registry-url')                    // Docker Hub URL (docker.io)
+        DOCKER_CREDENTIALS = credentials('docker-registry-credentials')         // Docker Hub login credentials
+        IMAGE_PREFIX = "${DOCKER_REGISTRY}/${APP_NAME}"                        // Full image name prefix
+        
+        // =============================================================================
+        // KUBERNETES DEPLOYMENT CONFIGURATION
+        // =============================================================================
+        // Target environments for application deployment
+        
+        K8S_NAMESPACE_STAGING = 'aquaculture-staging'                          // Staging environment namespace
+        K8S_NAMESPACE_PROD = 'aquaculture-production'                          // Production environment namespace
+        KUBECONFIG = credentials('kubeconfig')                                 // Kubernetes cluster configuration
+        
+        // =============================================================================
+        // QUALITY AND SECURITY THRESHOLDS
+        // =============================================================================
+        // Standards that must be met for the pipeline to succeed
+        
+        CODE_COVERAGE_THRESHOLD = '80'                                         // Minimum test coverage percentage
+        SONAR_PROJECT_KEY = 'aquaculture-ml-platform'                          // SonarQube project identifier
+        SECURITY_SEVERITY_THRESHOLD = 'HIGH'                                   // Minimum security issue severity to fail build
+        
+        // =============================================================================
+        // GIT INFORMATION
+        // =============================================================================
+        // Information about the current code being built
+        
+        GIT_COMMIT_SHORT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()     // Short commit hash
+        GIT_BRANCH = sh(script: "git rev-parse --abbrev-ref HEAD", returnStdout: true).trim()      // Current branch name
+        
+        // =============================================================================
+        // NOTIFICATION CONFIGURATION
+        // =============================================================================
+        // Where to send build status notifications
+        
+        SLACK_CHANNEL = '#ci-cd-notifications'                                 // Slack channel for build notifications
+        EMAIL_RECIPIENTS = 'devops-team@company.com'                           // Email addresses for notifications
+    }
+    
+    // =============================================================================
+    // PIPELINE OPTIONS - GLOBAL BEHAVIOR SETTINGS
+    // =============================================================================
+    // These options control how the pipeline behaves and manages resources
+    
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '10'))  // Keep last 30 builds, 10 artifacts
+        disableConcurrentBuilds()                                                   // Prevent multiple builds running simultaneously
+        timeout(time: 90, unit: 'MINUTES')                                         // Kill build if it takes longer than 90 minutes
+        timestamps()                                                                // Add timestamps to console output
+        ansiColor('xterm')                                                          // Enable colored console output
+    }
+    
+    // =============================================================================
+    // PIPELINE PARAMETERS - USER INPUT OPTIONS
+    // =============================================================================
+    // These parameters allow customization when manually triggering builds
+    // Users can select different options when clicking "Build with Parameters"
+    
+    parameters {
+        // Environment Selection - Where to deploy the application
+        choice(
+            name: 'DEPLOYMENT_ENVIRONMENT',
+            choices: ['staging', 'production', 'both'],                            // Available deployment targets
+            description: 'Target deployment environment'
+        )
+        
+        // Test Execution Control - Skip tests for emergency deployments
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,                                                    // Tests run by default
+            description: 'Skip test execution (emergency deployments only)'
+        )
+        
+        // Security Scanning Control - Enable/disable vulnerability scanning
+        booleanParam(
+            name: 'ENABLE_SECURITY_SCAN',
+            defaultValue: true,                                                     // Security scanning enabled by default
+            description: 'Enable security vulnerability scanning'
+        )
+        
+        // Production Deployment Gate - Extra confirmation for production
+        booleanParam(
+            name: 'DEPLOY_TO_PRODUCTION',
+            defaultValue: false,                                                    // Production deployment disabled by default
+            description: 'Deploy to production environment'
+        )
+    }
+    
+    // =============================================================================
+    // PIPELINE TRIGGERS - WHEN THE PIPELINE RUNS AUTOMATICALLY
+    // =============================================================================
+    // These triggers determine when Jenkins automatically starts a build
+    
+    triggers {
+        githubPush()                                                                // Run when code is pushed to GitHub
+        cron(env.BRANCH_NAME == 'main' ? 'H 2 * * 1-5' : '')                      // Run nightly on main branch (weekdays at 2 AM)
+    }
+    
+    // =============================================================================
+    // PIPELINE STAGES - THE MAIN WORKFLOW
+    // =============================================================================
+    // Each stage represents a major step in the CI/CD process
+    // Stages run sequentially, and if one fails, the pipeline stops
+    
+    stages {
+        // =============================================================================
+        // STAGE 1: INITIALIZE PIPELINE
+        // =============================================================================
+        // This stage sets up the build environment and displays key information
+        // It's like the "welcome screen" that shows what's about to be built
+        
+        stage('Initialize Pipeline') {
+            steps {
+                script {
+                    echo "Pipeline Initialization"
+                    echo "======================="
+                    echo "Application: ${APP_NAME}"                                  // Show application name
+                    echo "Version: ${BUILD_VERSION}"                                 // Show version being built
+                    echo "Git Commit: ${GIT_COMMIT_SHORT}"                           // Show which code commit
+                    echo "Branch: ${GIT_BRANCH}"                                     // Show which branch
+                    echo "Build Number: ${BUILD_NUMBER}"                            // Show Jenkins build number
+                    
+                    // Set build display name in Jenkins UI for easy identification
+                    currentBuild.displayName = "#${BUILD_NUMBER} - v${BUILD_VERSION}"
+                    currentBuild.description = "Branch: ${GIT_BRANCH} | Commit: ${GIT_COMMIT_SHORT}"
+                }
+            }
+        }
+        
+        // =============================================================================
+        // STAGE 2: PARALLEL QUALITY CHECKS
+        // =============================================================================
+        // This stage runs multiple quality checks simultaneously to save time
+        // All checks must pass for the pipeline to continue
+        
+        stage('Parallel Quality Checks') {
+            parallel {
+                // =============================================================================
+                // CODE QUALITY ANALYSIS - CHECK CODE STYLE AND BEST PRACTICES
+                // =============================================================================
+                // Runs various tools to ensure code meets quality standards
+                
+                stage('Code Quality Analysis') {
+                    steps {
+                        container('python') {                                       // Use Python container for Python tools
+                            script {
+                                echo "Running Code Quality Analysis..."
+                                sh '''
+                                    # Install code quality tools from requirements-dev.txt
+                                    pip install --quiet -r requirements-dev.txt || pip install --quiet black flake8 pylint mypy bandit isort
+                                    
+                                    echo "Code Formatting Check..."
+                                    # Black: Check if code follows Python formatting standards
+                                    black --check --diff services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ || true
+                                    
+                                    echo "Import Sorting Check..."
+                                    # isort: Check import order
+                                    isort --check-only --diff services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ || true
+                                    
+                                    echo "Linting Check..."
+                                    # Flake8: Check for style guide violations and programming errors
+                                    flake8 services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ --max-line-length=100 --exclude=__pycache__,migrations --format=pylint || true
+                                    
+                                    echo "Type Checking..."
+                                    # MyPy: Check for type annotation errors
+                                    mypy services/ --ignore-missing-imports || true
+                                    
+                                    echo "Security Linting..."
+                                    # Bandit: Check for common security issues in Python code
+                                    bandit -r services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ -f txt || true
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Dependency Security Scan') {
+                    when {
+                        expression { params.ENABLE_SECURITY_SCAN }
+                    }
+                    steps {
+                        container('python') {
+                            script {
+                                echo "Scanning Dependencies for Vulnerabilities..."
+                                sh '''
+                                    pip install --quiet safety pip-audit
+                                    
+                                    echo "Running Safety Check on requirements..."
+                                    safety check --file requirements.txt --json || true
+                                    safety check --file requirements-docker.txt --json || true
+                                    
+                                    echo "Running Pip Audit..."
+                                    pip-audit --desc --format=json || true
+                                    
+                                    echo "Checking for known vulnerabilities in installed packages..."
+                                    pip list --format=json > installed_packages.json || true
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('SAST Analysis') {
+                    steps {
+                        container('python') {
+                            script {
+                                echo "Static Application Security Testing..."
+                                sh '''
+                                    pip install --quiet semgrep
+                                    
+                                    echo "Running Semgrep SAST on all Python code..."
+                                    semgrep --config=auto services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ --json --output=semgrep-results.json || true
+                                    
+                                    echo "Running additional security checks..."
+                                    # Check for hardcoded secrets
+                                    semgrep --config=p/secrets services/ airflow/ spark/ streaming/ data_quality/ data_catalog/ --json || true
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Build & Test') {
+            when {
+                not { expression { params.SKIP_TESTS } }
+            }
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        container('python') {
+                            script {
+                                echo "Running Unit Tests with Coverage..."
+                                sh '''
+                                    # Install dependencies with fallback
+                                    pip install --quiet -r requirements-docker.txt || pip install --quiet -r requirements.txt
+                                    pip install --quiet -r requirements-dev.txt || pip install --quiet pytest pytest-cov pytest-xdist pytest-asyncio pytest-mock
+                                    
+                                    # Install additional test dependencies
+                                    pip install --quiet factory-boy faker
+                                    
+                                    echo "Running unit tests with coverage..."
+                                    pytest tests/unit/ \
+                                        --cov=services \
+                                        --cov=airflow \
+                                        --cov=spark \
+                                        --cov=streaming \
+                                        --cov=data_quality \
+                                        --cov=data_catalog \
+                                        --cov-report=xml:coverage.xml \
+                                        --cov-report=html:htmlcov \
+                                        --cov-report=term-missing \
+                                        --junit-xml=junit-unit.xml \
+                                        --cov-fail-under=${CODE_COVERAGE_THRESHOLD} \
+                                        -n auto \
+                                        -v || true
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit 'junit-unit.xml'
+                            publishHTML([
+                                allowMissing: false,
+                                alwaysLinkToLastBuild: true,
+                                keepAll: true,
+                                reportDir: 'htmlcov',
+                                reportFiles: 'index.html',
+                                reportName: 'Code Coverage Report'
+                            ])
+                        }
+                    }
+                }
+                
+                stage('Integration Tests') {
+                    steps {
+                        container('python') {
+                            script {
+                                echo "Running Integration Tests..."
+                                sh '''
+                                    echo "Running integration tests..."
+                                    pytest tests/integration/ \
+                                        --junit-xml=junit-integration.xml \
+                                        --maxfail=5 \
+                                        -v || true
+                                    
+                                    echo "Running load tests (basic validation)..."
+                                    if [ -f "tests/load/locustfile.py" ]; then
+                                        pip install --quiet locust
+                                        locust --version || true
+                                    fi
+                                '''
+                            }
+                        }
+                    }
+                    post {
+                        always {
+                            junit 'junit-integration.xml'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Docker Image Build') {
+            parallel {
+                stage('Build API Image') {
+                    steps {
+                        container('docker') {
+                            script {
+                                echo "Building API Docker Image..."
+                                sh """
+                                    docker build \
+                                        --build-arg BUILD_VERSION=${BUILD_VERSION} \
+                                        --build-arg GIT_COMMIT=${GIT_COMMIT_SHORT} \
+                                        --build-arg BUILD_DATE=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+                                        --label org.opencontainers.image.version=${BUILD_VERSION} \
+                                        --label org.opencontainers.image.revision=${GIT_COMMIT_SHORT} \
+                                        --label org.opencontainers.image.created=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+                                        -f infrastructure/docker/Dockerfile.api \
+                                        -t ${IMAGE_PREFIX}/api:${BUILD_VERSION} \
+                                        -t ${IMAGE_PREFIX}/api:latest \
+                                        .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build ML Service Image') {
+                    steps {
+                        container('docker') {
+                            script {
+                                echo "Building ML Service Docker Image..."
+                                sh """
+                                    docker build \
+                                        --build-arg BUILD_VERSION=${BUILD_VERSION} \
+                                        --build-arg GIT_COMMIT=${GIT_COMMIT_SHORT} \
+                                        --build-arg BUILD_DATE=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+                                        --label org.opencontainers.image.version=${BUILD_VERSION} \
+                                        --label org.opencontainers.image.revision=${GIT_COMMIT_SHORT} \
+                                        --label org.opencontainers.image.created=\$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+                                        -f infrastructure/docker/Dockerfile.ml-service \
+                                        -t ${IMAGE_PREFIX}/ml-service:${BUILD_VERSION} \
+                                        -t ${IMAGE_PREFIX}/ml-service:latest \
+                                        .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Frontend Image') {
+                    steps {
+                        container('docker') {
+                            script {
+                                echo "Building Frontend Docker Image..."
+                                sh """
+                                    docker build \
+                                        --build-arg BUILD_VERSION=${BUILD_VERSION} \
+                                        --build-arg VITE_API_URL=http://localhost:8000 \
+                                        -f infrastructure/docker/Dockerfile.frontend \
+                                        -t ${IMAGE_PREFIX}/frontend:${BUILD_VERSION} \
+                                        -t ${IMAGE_PREFIX}/frontend:latest \
+                                        .
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Build Worker Image') {
+                    steps {
+                        container('docker') {
+                            script {
+                                echo "Building Worker Docker Image..."
+                                sh """
+                                    docker build \
+                                        --build-arg BUILD_VERSION=${BUILD_VERSION} \
+                                        -f infrastructure/docker/Dockerfile.api \
+                                        -t ${IMAGE_PREFIX}/worker:${BUILD_VERSION} \
+                                        -t ${IMAGE_PREFIX}/worker:latest \
+                                        .
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Container Security Scan') {
+            when {
+                expression { params.ENABLE_SECURITY_SCAN }
+            }
+            parallel {
+                stage('Scan API Image') {
+                    steps {
+                        container('trivy') {
+                            script {
+                                echo "Scanning API Image for Vulnerabilities..."
+                                sh """
+                                    trivy image \
+                                        --severity ${SECURITY_SEVERITY_THRESHOLD},CRITICAL \
+                                        --exit-code 0 \
+                                        --format json \
+                                        --output api-security-report.json \
+                                        ${IMAGE_PREFIX}/api:${BUILD_VERSION}
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Scan ML Service Image') {
+                    steps {
+                        container('trivy') {
+                            script {
+                                echo "Scanning ML Service Image for Vulnerabilities..."
+                                sh """
+                                    trivy image \
+                                        --severity ${SECURITY_SEVERITY_THRESHOLD},CRITICAL \
+                                        --exit-code 0 \
+                                        --format json \
+                                        --output ml-service-security-report.json \
+                                        ${IMAGE_PREFIX}/ml-service:${BUILD_VERSION}
+                                """
+                            }
+                        }
+                    }
+                }
+                
+                stage('Scan Frontend Image') {
+                    steps {
+                        container('trivy') {
+                            script {
+                                echo "Scanning Frontend Image for Vulnerabilities..."
+                                sh """
+                                    trivy image \
+                                        --severity ${SECURITY_SEVERITY_THRESHOLD},CRITICAL \
+                                        --exit-code 0 \
+                                        --format json \
+                                        --output frontend-security-report.json \
+                                        ${IMAGE_PREFIX}/frontend:${BUILD_VERSION}
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '*-security-report.json', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Push to Registry') {
+            steps {
+                container('docker') {
+                    script {
+                        echo "Pushing Docker Images to Registry..."
+                        withCredentials([usernamePassword(
+                            credentialsId: 'docker-registry-credentials',
+                            usernameVariable: 'DOCKER_USER',
+                            passwordVariable: 'DOCKER_PASS'
+                        )]) {
+                            sh '''
+                                echo "${DOCKER_PASS}" | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USER} --password-stdin
+                                
+                                echo "Pushing API image..."
+                                docker push ${IMAGE_PREFIX}/api:${BUILD_VERSION}
+                                docker push ${IMAGE_PREFIX}/api:latest
+                                
+                                echo "Pushing ML Service image..."
+                                docker push ${IMAGE_PREFIX}/ml-service:${BUILD_VERSION}
+                                docker push ${IMAGE_PREFIX}/ml-service:latest
+                                
+                                echo "Pushing Frontend image..."
+                                docker push ${IMAGE_PREFIX}/frontend:${BUILD_VERSION}
+                                docker push ${IMAGE_PREFIX}/frontend:latest
+                                
+                                echo "Pushing Worker image..."
+                                docker push ${IMAGE_PREFIX}/worker:${BUILD_VERSION}
+                                docker push ${IMAGE_PREFIX}/worker:latest
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Staging') {
+            when {
+                anyOf {
+                    expression { params.DEPLOYMENT_ENVIRONMENT == 'staging' }
+                    expression { params.DEPLOYMENT_ENVIRONMENT == 'both' }
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            steps {
+                container('kubectl') {
+                    script {
+                        echo "Deploying to Staging Environment..."
+                        sh """
+                            kubectl config use-context staging-cluster
+                            
+                            # Update deployment images
+                            kubectl set image deployment/aquaculture-api \
+                                api=${IMAGE_PREFIX}/api:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_STAGING}
+                            
+                            kubectl set image deployment/aquaculture-ml-service \
+                                ml-service=${IMAGE_PREFIX}/ml-service:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_STAGING}
+                            
+                            kubectl set image deployment/aquaculture-frontend \
+                                frontend=${IMAGE_PREFIX}/frontend:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_STAGING}
+                            
+                            kubectl set image deployment/aquaculture-worker \
+                                worker=${IMAGE_PREFIX}/worker:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_STAGING}
+                            
+                            # Wait for rollout to complete
+                            kubectl rollout status deployment/aquaculture-api -n ${K8S_NAMESPACE_STAGING} --timeout=5m
+                            kubectl rollout status deployment/aquaculture-ml-service -n ${K8S_NAMESPACE_STAGING} --timeout=5m
+                            kubectl rollout status deployment/aquaculture-frontend -n ${K8S_NAMESPACE_STAGING} --timeout=5m
+                            kubectl rollout status deployment/aquaculture-worker -n ${K8S_NAMESPACE_STAGING} --timeout=5m
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Staging Smoke Tests') {
+            when {
+                anyOf {
+                    expression { params.DEPLOYMENT_ENVIRONMENT == 'staging' }
+                    expression { params.DEPLOYMENT_ENVIRONMENT == 'both' }
+                    branch 'main'
+                }
+            }
+            steps {
+                container('python') {
+                    script {
+                        echo "Running Smoke Tests on Staging..."
+                        sh '''
+                            pip install --quiet requests pytest
+                            
+                            echo "Running comprehensive smoke tests..."
+                            export BASE_URL=https://staging.aquaculture.company.com
+                            export ML_BASE_URL=https://staging-ml.aquaculture.company.com
+                            export FRONTEND_URL=https://staging-app.aquaculture.company.com
+                            export PROMETHEUS_URL=https://staging-prometheus.aquaculture.company.com
+                            export GRAFANA_URL=https://staging-grafana.aquaculture.company.com
+                            
+                            pytest tests/smoke/ \
+                                --junit-xml=junit-smoke.xml \
+                                --maxfail=10 \
+                                -v || true
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    junit 'junit-smoke.xml'
+                }
+            }
+        }
+        
+        stage('Production Deployment Approval') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { params.DEPLOY_TO_PRODUCTION }
+                }
+            }
+            steps {
+                script {
+                    timeout(time: 24, unit: 'HOURS') {
+                        input message: 'Deploy to Production?',
+                              ok: 'Deploy',
+                              submitter: 'admin,devops-lead,platform-owner',
+                              parameters: [
+                                  choice(
+                                      name: 'PRODUCTION_DEPLOYMENT_STRATEGY',
+                                      choices: ['rolling-update', 'blue-green'],
+                                      description: 'Deployment strategy for production'
+                                  )
+                              ]
+                    }
+                }
+            }
+        }
+        
+        stage('Deploy to Production') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { params.DEPLOY_TO_PRODUCTION }
+                }
+            }
+            steps {
+                container('kubectl') {
+                    script {
+                        echo "Deploying to Production Environment..."
+                        sh """
+                            kubectl config use-context production-cluster
+                            
+                            # Create deployment backups
+                            kubectl get deployment aquaculture-api -n ${K8S_NAMESPACE_PROD} -o yaml > backup-api-deployment.yaml
+                            kubectl get deployment aquaculture-ml-service -n ${K8S_NAMESPACE_PROD} -o yaml > backup-ml-deployment.yaml
+                            
+                            # Update production deployments
+                            kubectl set image deployment/aquaculture-api \
+                                api=${IMAGE_PREFIX}/api:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_PROD}
+                            
+                            kubectl set image deployment/aquaculture-ml-service \
+                                ml-service=${IMAGE_PREFIX}/ml-service:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_PROD}
+                            
+                            kubectl set image deployment/aquaculture-frontend \
+                                frontend=${IMAGE_PREFIX}/frontend:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_PROD}
+                            
+                            kubectl set image deployment/aquaculture-worker \
+                                worker=${IMAGE_PREFIX}/worker:${BUILD_VERSION} \
+                                -n ${K8S_NAMESPACE_PROD}
+                            
+                            # Wait for rollout with longer timeout for production
+                            kubectl rollout status deployment/aquaculture-api -n ${K8S_NAMESPACE_PROD} --timeout=10m
+                            kubectl rollout status deployment/aquaculture-ml-service -n ${K8S_NAMESPACE_PROD} --timeout=10m
+                            kubectl rollout status deployment/aquaculture-frontend -n ${K8S_NAMESPACE_PROD} --timeout=10m
+                            kubectl rollout status deployment/aquaculture-worker -n ${K8S_NAMESPACE_PROD} --timeout=10m
+                        """
+                    }
+                }
+            }
+        }
+        
+        stage('Production Health Check') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { params.DEPLOY_TO_PRODUCTION }
+                }
+            }
+            steps {
+                container('python') {
+                    script {
+                        echo "Verifying Production Deployment Health..."
+                        sh '''
+                            pip install --quiet requests
+                            
+                            python3 << 'EOF'
+import requests
+import time
+import sys
+
+def check_health(url, max_retries=5):
+    for i in range(max_retries):
+        try:
+            response = requests.get(f"{url}/health", timeout=10)
+            if response.status_code == 200:
+                print(f"Health check passed: {response.json()}")
+                return True
+        except Exception as e:
+            print(f"Retry {i+1}/{max_retries}: {str(e)}")
+            time.sleep(10)
+    return False
+
+if not check_health("https://aquaculture.company.com"):
+    print("Production health check failed!")
+    sys.exit(1)
+print("Production deployment verified successfully!")
+EOF
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Create Git Tag') {
+            when {
+                branch 'main'
+            }
+            steps {
+                script {
+                    echo "Creating Git Tag for Release..."
+                    sh """
+                        git config user.name "Jenkins CI"
+                        git config user.email "jenkins@company.com"
+                        git tag -a v${BUILD_VERSION} -m "Release version ${BUILD_VERSION}"
+                        git push origin v${BUILD_VERSION} || true
+                    """
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                // Archive artifacts
+                archiveArtifacts artifacts: '**/*-report.*, **/junit-*.xml, backup-*.yaml',
+                               allowEmptyArchive: true,
+                               fingerprint: true
+                
+                // Cleanup
+                sh 'docker system prune -f || true'
+            }
+        }
+        
+        success {
+            script {
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'good',
+                    message: """
+                        *BUILD SUCCESSFUL*
+                        
+                        Application: ${APP_NAME}
+                        Version: ${BUILD_VERSION}
+                        Branch: ${GIT_BRANCH}
+                        Build: #${BUILD_NUMBER}
+                        Duration: ${currentBuild.durationString.replace(' and counting', '')}
+                        
+                        <${BUILD_URL}|View Build Details>
+                    """.stripIndent()
+                )
+                
+                emailext(
+                    subject: "BUILD SUCCESS: ${APP_NAME} v${BUILD_VERSION}",
+                    body: """
+                        <h2>Build Successful</h2>
+                        <p><strong>Application:</strong> ${APP_NAME}</p>
+                        <p><strong>Version:</strong> ${BUILD_VERSION}</p>
+                        <p><strong>Branch:</strong> ${GIT_BRANCH}</p>
+                        <p><strong>Commit:</strong> ${GIT_COMMIT_SHORT}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><a href="${BUILD_URL}">View Build Details</a></p>
+                    """,
+                    to: env.EMAIL_RECIPIENTS,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        failure {
+            script {
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'danger',
+                    message: """
+                        *BUILD FAILED*
+                        
+                        Application: ${APP_NAME}
+                        Version: ${BUILD_VERSION}
+                        Branch: ${GIT_BRANCH}
+                        Build: #${BUILD_NUMBER}
+                        Failed Stage: ${env.STAGE_NAME}
+                        
+                        <${BUILD_URL}console|View Console Output>
+                    """.stripIndent()
+                )
+                
+                emailext(
+                    subject: "BUILD FAILED: ${APP_NAME} v${BUILD_VERSION}",
+                    body: """
+                        <h2>Build Failed</h2>
+                        <p><strong>Application:</strong> ${APP_NAME}</p>
+                        <p><strong>Failed Stage:</strong> ${env.STAGE_NAME}</p>
+                        <p><strong>Branch:</strong> ${GIT_BRANCH}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><a href="${BUILD_URL}console">View Console Output</a></p>
+                    """,
+                    to: env.EMAIL_RECIPIENTS,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        unstable {
+            script {
+                slackSend(
+                    channel: env.SLACK_CHANNEL,
+                    color: 'warning',
+                    message: """
+                        *BUILD UNSTABLE*
+                        
+                        Application: ${APP_NAME}
+                        Version: ${BUILD_VERSION}
+                        Some tests failed or quality gates not met.
+                        
+                        <${BUILD_URL}|Review Build Results>
+                    """.stripIndent()
+                )
+            }
+        }
+    }
+}

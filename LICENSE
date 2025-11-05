@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2024 Saidul Islam
+Copyright (c) 2024 Aquaculture Machine Learning Platform
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,40 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+Additional Terms and Conditions
+================================================================================
+
+Data Privacy and Compliance:
+This software may process agricultural and livestock data that could be subject
+to various privacy regulations. Users are responsible for ensuring compliance
+with applicable data protection laws including but not limited to GDPR, CCPA,
+and local agricultural data regulations.
+
+Commercial Use:
+While this software is provided under the MIT License, users implementing this
+platform for commercial agricultural operations should consider:
+- Data ownership and farmer privacy rights
+- Compliance with agricultural data sharing regulations
+- Integration with existing farm management systems
+- Scalability and production deployment considerations
+
+Attribution:
+When using this software in academic research, commercial products, or 
+derivative works, please consider citing this project and acknowledging
+the contributions of the open-source community.
+
+Third-Party Dependencies:
+This software includes various third-party libraries and dependencies, each
+governed by their respective licenses. Users should review and comply with
+all applicable license terms for dependencies used in their implementation.
+
+Support and Warranty Disclaimer:
+This software is provided as-is without warranty or guaranteed support.
+While the maintainers strive to provide a high-quality platform, users
+should thoroughly test and validate the software for their specific use cases.
+
+For questions about licensing, commercial use, or compliance, please contact:
+- Email: legal@aquaculture-platform.com
+- GitHub: https://github.com/saidulIslam1602/Aquaculture-ML-Platform

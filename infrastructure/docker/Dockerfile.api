@@ -1,21 +1,48 @@
-# Multi-stage build for API service
+# =============================================================================
+# Dockerfile for Aquaculture ML Platform API Service
+# =============================================================================
+# 
+# This Dockerfile creates a production-ready container for the FastAPI-based
+# API service. It uses a multi-stage build approach to minimize the final
+# image size while ensuring all necessary dependencies are included.
+#
+# Build stages:
+# 1. Builder stage: Installs build dependencies and Python packages
+# 2. Runtime stage: Creates minimal runtime environment with only necessary files
+#
+# Security features:
+# - Non-root user execution
+# - Minimal attack surface with slim base image
+# - Dependency vulnerability scanning compatible
+# - Read-only root filesystem support
+# =============================================================================
+
+# Builder stage: Install dependencies and build Python packages
 FROM python:3.10-slim AS builder
 
-# Set working directory
+# Set working directory for build operations
 WORKDIR /app
 
-# Install system dependencies
+# Install system build dependencies required for Python package compilation
+# These dependencies are only needed during the build process and will not
+# be included in the final runtime image
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements files
+# Copy Python requirements files for dependency installation
+# Using separate COPY commands for better Docker layer caching
 COPY requirements-docker.txt ./requirements-docker.txt
 COPY requirements.txt ./requirements-full.txt
 
-# Install Python dependencies with comprehensive fallback
+# Install Python dependencies with comprehensive fallback strategy
+# This approach ensures the container builds successfully even if some
+# dependencies are unavailable or incompatible
+# 1. Try optimized Docker requirements first (minimal dependencies)
+# 2. Fall back to full requirements if Docker requirements fail
+# 3. Fall back to essential core dependencies as last resort
 RUN pip install --upgrade pip && \
     (pip install --no-cache-dir --user -r requirements-docker.txt || \
      pip install --no-cache-dir --user -r requirements-full.txt || \
@@ -28,39 +55,58 @@ RUN pip install --upgrade pip && \
        python-multipart==0.0.6 \
        httpx==0.25.2)
 
-# Final stage
+# =============================================================================
+# Runtime stage: Create minimal production environment
+# =============================================================================
 FROM python:3.10-slim
 
+# Set working directory for the runtime environment
 WORKDIR /app
 
-# Install runtime dependencies
+# Install only runtime system dependencies (no build tools)
+# libpq5: PostgreSQL client library for database connectivity
 RUN apt-get update && apt-get install -y \
     libpq5 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python dependencies from builder
+# Copy pre-built Python dependencies from builder stage
+# This approach reduces image size by excluding build dependencies
 COPY --from=builder /root/.local /root/.local
 
-# Make sure scripts in .local are usable
+# Ensure Python packages installed in .local are accessible
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy application source code
+# Copying __init__.py first to establish proper Python package structure
 COPY services/__init__.py /app/services/__init__.py
 COPY services/api /app/services/api
 
-# Verify files were copied
+# Verify application files were copied correctly
+# This step helps debug build issues and ensures proper file structure
 RUN ls -la /app/services/ && ls -la /app/services/api/
 
-# Create non-root user
+# Create non-root user for security best practices
+# Running as non-root reduces potential attack surface
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Expose port
+# Expose the application port
+# Port 8000 is the standard FastAPI development port
 EXPOSE 8000
 
-# Health check
+# Configure health check for container orchestration
+# This enables Kubernetes and Docker Compose to monitor container health
+# Parameters:
+# - interval: How often to run the health check
+# - timeout: Maximum time to wait for health check response
+# - start-period: Grace period before health checks start
+# - retries: Number of consecutive failures before marking unhealthy
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8000/health')"
 
-# Run application
+# Start the FastAPI application using Uvicorn ASGI server
+# Configuration:
+# - Host 0.0.0.0: Accept connections from any IP (required for containers)
+# - Port 8000: Standard FastAPI port
+# - Module path: services.api.main:app points to the FastAPI application instance
 CMD ["uvicorn", "services.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

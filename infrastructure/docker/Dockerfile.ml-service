@@ -1,9 +1,32 @@
-# Multi-stage build for ML service
+# =============================================================================
+# Dockerfile for Aquaculture ML Platform Machine Learning Service
+# =============================================================================
+# 
+# This Dockerfile creates a production-ready container for the ML inference
+# service. It uses a multi-stage build to optimize image size while including
+# all necessary dependencies for machine learning workloads.
+#
+# Build stages:
+# 1. Builder stage: Installs ML dependencies and compiles native extensions
+# 2. Runtime stage: Creates optimized runtime environment for ML inference
+#
+# ML-specific features:
+# - PyTorch and scikit-learn support
+# - OpenCV for computer vision tasks
+# - Optimized for CPU inference (GPU support can be enabled)
+# - Model loading and caching capabilities
+# - Performance monitoring and metrics collection
+# =============================================================================
+
+# Builder stage: Install ML dependencies and build native extensions
 FROM python:3.10-slim AS builder
 
+# Set working directory for build operations
 WORKDIR /app
 
-# Install build dependencies
+# Install system build dependencies required for ML packages
+# gcc/g++: Required for compiling native extensions (NumPy, SciPy, etc.)
+# libpq-dev: PostgreSQL development headers for database connectivity
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -27,38 +50,61 @@ RUN pip install --upgrade pip && \
        python-multipart==0.0.6 \
        httpx==0.25.2)
 
-# Final stage
+# =============================================================================
+# Runtime stage: Create optimized ML inference environment
+# =============================================================================
 FROM python:3.10-slim
 
+# Set working directory for ML service operations
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime system dependencies for ML workloads
+# libpq5: PostgreSQL client library for database operations
+# libgomp1: OpenMP library for parallel processing (required by many ML libraries)
 RUN apt-get update && apt-get install -y \
     libpq5 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python dependencies
+# Copy pre-built Python dependencies from builder stage
+# This includes all ML libraries (PyTorch, scikit-learn, OpenCV, etc.)
 COPY --from=builder /root/.local /root/.local
+
+# Ensure ML packages are accessible in the runtime environment
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy ML service application code
+# Maintaining proper Python package structure for imports
 COPY services/__init__.py /app/services/__init__.py
 COPY services/ml-service /app/services/ml-service
 
-# Verify files were copied
+# Verify ML service files were copied correctly
+# This helps debug deployment issues and ensures proper service structure
 RUN ls -la /app/services/ && ls -la /app/services/ml-service/
 
-# Create directories
+# Create directories for ML models and data storage
+# /app/models: Directory for storing trained ML models
+# /app/data: Directory for temporary data processing and caching
 RUN mkdir -p /app/models /app/data
 
-# Create non-root user
+# Create dedicated ML service user for security
+# Using a specific user name (mluser) for ML service identification
 RUN useradd -m -u 1000 mluser && chown -R mluser:mluser /app
 USER mluser
 
+# Expose ML service port
+# Port 8001 is used to differentiate from the main API service (8000)
 EXPOSE 8001
 
+# Configure health check for ML service monitoring
+# Extended start period (60s) to account for ML model loading time
+# ML models can take longer to initialize than standard web services
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD python -c "import requests; requests.get('http://localhost:8001/health')"
 
+# Start the ML inference service using Uvicorn
+# Configuration optimized for ML workloads:
+# - Host 0.0.0.0: Accept connections from any IP (required for containers)
+# - Port 8001: Dedicated ML service port
+# - Module path: services.ml-service.main:app points to ML FastAPI application
 CMD ["uvicorn", "services.ml-service.main:app", "--host", "0.0.0.0", "--port", "8001"]

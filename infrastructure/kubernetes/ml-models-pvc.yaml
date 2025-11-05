@@ -1,0 +1,52 @@
+# Persistent Volume Claim for ML Models
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ml-models-pvc
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+    component: storage
+spec:
+  accessModes:
+    - ReadOnlyMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+  
+---
+# ML Models ConfigMap (for model metadata)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ml-models-config
+  namespace: aquaculture-prod
+  labels:
+    app: ml-service
+    component: config
+data:
+  model_config.yaml: |
+    models:
+      fish_classifier:
+        path: "/app/models/fish_classifier.pth"
+        version: "2.1.0"
+        input_size: [224, 224, 3]
+        classes: ["healthy", "diseased", "stressed"]
+        batch_size: 32
+      livestock_health:
+        path: "/app/models/livestock_health.pth"
+        version: "1.5.0"
+        input_features: 15
+        output_classes: 4
+        batch_size: 16
+    
+    inference:
+      timeout: 30
+      max_batch_size: 64
+      gpu_enabled: false
+      
+    monitoring:
+      metrics_enabled: true
+      log_predictions: true
+      performance_tracking: true
