@@ -43,9 +43,9 @@ class Settings(BaseSettings):
     # API Configuration
     # RESTful API settings following OpenAPI 3.0 specification
     API_V1_PREFIX: str = "/api/v1"
-    PROJECT_NAME: str = "Aquaculture ML Platform"
-    VERSION: str = "0.1.0"
-    DESCRIPTION: str = "Production-grade ML platform for fish classification"
+    PROJECT_NAME: str = "Agricultural IoT Platform"
+    VERSION: str = "1.0.0"
+    DESCRIPTION: str = "Production-grade IoT platform for agricultural monitoring and analytics"
 
     # Server Configuration
     # Network binding settings for uvicorn ASGI server
@@ -53,12 +53,17 @@ class Settings(BaseSettings):
     API_PORT: int = 8000
 
     # Database Configuration
-    # PostgreSQL connection settings with connection pooling
+    # TimescaleDB connection settings with connection pooling
     DATABASE_URL: str = (
-        "postgresql://aquaculture:aquaculture123@postgres:5432/aquaculture_db"
+        "postgresql://agricultural_iot:agricultural_iot123@timescaledb:5432/agricultural_iot_db"
     )
     DATABASE_POOL_SIZE: int = 20  # Max connections in pool
     DATABASE_MAX_OVERFLOW: int = 10  # Additional connections when pool is full
+    
+    # TimescaleDB Configuration
+    TIMESCALEDB_CHUNK_TIME_INTERVAL: str = "1 day"  # Chunk interval for time-series data
+    TIMESCALEDB_COMPRESSION_ENABLED: bool = True
+    TIMESCALEDB_RETENTION_POLICY: str = "90 days"  # Data retention policy
 
     # Redis Configuration
     # In-memory cache and session store settings
@@ -68,7 +73,20 @@ class Settings(BaseSettings):
     # Kafka Configuration
     # Message broker settings for event streaming
     KAFKA_BOOTSTRAP_SERVERS: str = "kafka:9092"
-    KAFKA_TOPIC_PREDICTIONS: str = "fish-predictions"
+    KAFKA_TOPIC_AQUACULTURE: str = "aquaculture-telemetry"
+    KAFKA_TOPIC_LIVESTOCK: str = "livestock-telemetry"
+    KAFKA_TOPIC_ALERTS: str = "agricultural-alerts"
+    
+    # BigQuery Configuration
+    # Data warehouse settings for analytics
+    BIGQUERY_PROJECT_ID: str = "agricultural-iot-analytics"
+    BIGQUERY_DATASET_ID: str = "agricultural_telemetry"
+    BIGQUERY_CREDENTIALS_PATH: str = "/app/credentials/bigquery-service-account.json"
+    
+    # dbt Configuration
+    # Data transformation settings
+    DBT_PROFILES_DIR: str = "/app/dbt"
+    DBT_PROJECT_DIR: str = "/app/dbt/agricultural_analytics"
 
     # Security Configuration
     # Authentication and authorization settings

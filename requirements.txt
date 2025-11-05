@@ -4,11 +4,21 @@ uvicorn[standard]==0.24.0
 pydantic==2.5.0
 pydantic-settings==2.1.0
 
-# Database
+# Database & TimescaleDB
 sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg2-binary==2.9.9
 asyncpg==0.29.0
+
+# Modern Data Stack
+dbt-core==1.7.4
+dbt-postgres==1.7.4
+google-cloud-bigquery==3.13.0
+google-auth==2.23.4
+
+# Time-series & Geospatial
+geoalchemy2==0.14.2
+shapely==2.0.2
 
 # Redis
 redis==5.0.1
