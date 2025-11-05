@@ -88,7 +88,7 @@ async def create_animal(
             entity_subtype=animal_data.species,
             name=animal_data.name,
             description=animal_data.description,
-            metadata={
+            entity_metadata={
                 "species": animal_data.species,
                 "breed": animal_data.breed,
                 "age_months": animal_data.age_months,
@@ -114,12 +114,12 @@ async def create_animal(
             id=animal.id,
             external_id=animal.external_id,
             name=animal.name,
-            species=animal.metadata.get("species"),
-            breed=animal.metadata.get("breed"),
-            age_months=animal.metadata.get("age_months"),
-            weight_kg=animal.metadata.get("weight_kg"),
-            gender=animal.metadata.get("gender"),
-            health_status=animal.metadata.get("health_status"),
+            species=animal.entity_metadata.get("species"),
+            breed=animal.entity_metadata.get("breed"),
+            age_months=animal.entity_metadata.get("age_months"),
+            weight_kg=animal.entity_metadata.get("weight_kg"),
+            gender=animal.entity_metadata.get("gender"),
+            health_status=animal.entity_metadata.get("health_status"),
             farm_id=animal.farm_id,
             latitude=None,  # Will be populated from location if available
             longitude=None,
@@ -178,7 +178,7 @@ async def get_animals(
             query = query.filter(Entity.entity_subtype == species)
             
         if health_status:
-            query = query.filter(Entity.metadata["health_status"].astext == health_status)
+            query = query.filter(Entity.entity_metadata["health_status"].astext == health_status)
         
         animals = query.offset(offset).limit(limit).all()
         
@@ -187,12 +187,12 @@ async def get_animals(
                 id=animal.id,
                 external_id=animal.external_id,
                 name=animal.name,
-                species=animal.metadata.get("species"),
-                breed=animal.metadata.get("breed"),
-                age_months=animal.metadata.get("age_months"),
-                weight_kg=animal.metadata.get("weight_kg"),
-                gender=animal.metadata.get("gender"),
-                health_status=animal.metadata.get("health_status"),
+                species=animal.entity_metadata.get("species"),
+                breed=animal.entity_metadata.get("breed"),
+                age_months=animal.entity_metadata.get("age_months"),
+                weight_kg=animal.entity_metadata.get("weight_kg"),
+                gender=animal.entity_metadata.get("gender"),
+                health_status=animal.entity_metadata.get("health_status"),
                 farm_id=animal.farm_id,
                 is_active=animal.is_active,
                 created_at=animal.created_at,
@@ -240,12 +240,12 @@ async def get_animal(
             id=animal.id,
             external_id=animal.external_id,
             name=animal.name,
-            species=animal.metadata.get("species"),
-            breed=animal.metadata.get("breed"),
-            age_months=animal.metadata.get("age_months"),
-            weight_kg=animal.metadata.get("weight_kg"),
-            gender=animal.metadata.get("gender"),
-            health_status=animal.metadata.get("health_status"),
+            species=animal.entity_metadata.get("species"),
+            breed=animal.entity_metadata.get("breed"),
+            age_months=animal.entity_metadata.get("age_months"),
+            weight_kg=animal.entity_metadata.get("weight_kg"),
+            gender=animal.entity_metadata.get("gender"),
+            health_status=animal.entity_metadata.get("health_status"),
             farm_id=animal.farm_id,
             is_active=animal.is_active,
             created_at=animal.created_at,
@@ -297,9 +297,9 @@ async def update_animal(
         if animal_data.description is not None:
             animal.description = animal_data.description
         if animal_data.weight_kg is not None:
-            animal.metadata["weight_kg"] = animal_data.weight_kg
+            animal.entity_metadata["weight_kg"] = animal_data.weight_kg
         if animal_data.health_status is not None:
-            animal.metadata["health_status"] = animal_data.health_status
+            animal.entity_metadata["health_status"] = animal_data.health_status
         if animal_data.is_active is not None:
             animal.is_active = animal_data.is_active
         
@@ -314,12 +314,12 @@ async def update_animal(
             id=animal.id,
             external_id=animal.external_id,
             name=animal.name,
-            species=animal.metadata.get("species"),
-            breed=animal.metadata.get("breed"),
-            age_months=animal.metadata.get("age_months"),
-            weight_kg=animal.metadata.get("weight_kg"),
-            gender=animal.metadata.get("gender"),
-            health_status=animal.metadata.get("health_status"),
+            species=animal.entity_metadata.get("species"),
+            breed=animal.entity_metadata.get("breed"),
+            age_months=animal.entity_metadata.get("age_months"),
+            weight_kg=animal.entity_metadata.get("weight_kg"),
+            gender=animal.entity_metadata.get("gender"),
+            health_status=animal.entity_metadata.get("health_status"),
             farm_id=animal.farm_id,
             is_active=animal.is_active,
             created_at=animal.created_at,

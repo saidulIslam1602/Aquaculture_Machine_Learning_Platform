@@ -12,7 +12,7 @@ with source_data as (
         entity_subtype,
         name as entity_name,
         description,
-        metadata,
+        entity_metadata,
         location,
         farm_id,
         is_active,
@@ -48,68 +48,68 @@ enriched_entities as (
             else null 
         end as latitude,
         
-        -- Extract metadata fields for livestock
+        -- Extract entity_metadata fields for livestock
         case 
-            when entity_type = 'livestock' then (metadata->>'species')::text
+            when entity_type = 'livestock' then (entity_metadata->>'species')::text
             else null
         end as species,
         
         case 
-            when entity_type = 'livestock' then (metadata->>'breed')::text
+            when entity_type = 'livestock' then (entity_metadata->>'breed')::text
             else null
         end as breed,
         
         case 
-            when entity_type = 'livestock' then (metadata->>'gender')::text
+            when entity_type = 'livestock' then (entity_metadata->>'gender')::text
             else null
         end as gender,
         
         case 
-            when entity_type = 'livestock' then (metadata->>'age_months')::numeric
+            when entity_type = 'livestock' then (entity_metadata->>'age_months')::numeric
             else null
         end as age_months,
         
         case 
-            when entity_type = 'livestock' then (metadata->>'weight_kg')::numeric
+            when entity_type = 'livestock' then (entity_metadata->>'weight_kg')::numeric
             else null
         end as weight_kg,
         
         case 
-            when entity_type = 'livestock' then (metadata->>'health_status')::text
+            when entity_type = 'livestock' then (entity_metadata->>'health_status')::text
             else null
         end as health_status,
         
         case 
-            when entity_type = 'livestock' and (metadata->>'birth_date') is not null 
-            then (metadata->>'birth_date')::date
+            when entity_type = 'livestock' and (entity_metadata->>'birth_date') is not null 
+            then (entity_metadata->>'birth_date')::date
             else null
         end as birth_date,
         
         -- Calculate age in days if birth_date is available
         case 
-            when entity_type = 'livestock' and (metadata->>'birth_date') is not null 
-            then current_date - (metadata->>'birth_date')::date
+            when entity_type = 'livestock' and (entity_metadata->>'birth_date') is not null 
+            then current_date - (entity_metadata->>'birth_date')::date
             else null
         end as age_days,
         
-        -- Extract aquaculture-specific metadata
+        -- Extract aquaculture-specific entity_metadata
         case 
-            when entity_type = 'aquaculture' then (metadata->>'tank_id')::text
+            when entity_type = 'aquaculture' then (entity_metadata->>'tank_id')::text
             else null
         end as tank_id,
         
         case 
-            when entity_type = 'aquaculture' then (metadata->>'water_type')::text
+            when entity_type = 'aquaculture' then (entity_metadata->>'water_type')::text
             else null
         end as water_type,
         
         case 
-            when entity_type = 'aquaculture' then (metadata->>'stocking_density')::numeric
+            when entity_type = 'aquaculture' then (entity_metadata->>'stocking_density')::numeric
             else null
         end as stocking_density,
         
-        -- Full metadata for flexibility
-        metadata as raw_metadata
+        -- Full entity_metadata for flexibility
+        entity_metadata as raw_metadata
         
     from source_data
 )

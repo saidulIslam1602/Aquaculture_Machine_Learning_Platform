@@ -264,7 +264,7 @@ class BigQueryConnector:
                     st.entity_id::text as entity_id,
                     e.farm_id,
                     e.entity_type,
-                    e.metadata->>'species' as species,
+                    e.entity_metadata->>'species' as species,
                     CASE 
                         WHEN st.location IS NOT NULL 
                         THEN ST_Y(st.location::geometry) 

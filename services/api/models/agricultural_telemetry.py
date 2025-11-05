@@ -69,7 +69,7 @@ class Entity(Base):
     entity_subtype = Column(String(50))  # Species, breed, equipment model
     name = Column(String(200))
     description = Column(Text)
-    metadata = Column(JSONB)  # Flexible metadata (age, weight, breed, etc.)
+    entity_metadata = Column(JSONB)  # Flexible metadata (age, weight, breed, etc.)
     location = Column(Geography('POINT', srid=4326))  # GPS coordinates
     farm_id = Column(String(100), nullable=False)  # Farm identifier
     is_active = Column(Boolean, default=True)

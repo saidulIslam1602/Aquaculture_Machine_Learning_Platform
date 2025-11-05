@@ -88,7 +88,7 @@ class LivestockCreate(LivestockBase):
     breeding_info: Optional[Dict[str, Any]] = Field(None, description="Breeding information")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "external_id": "COW-001",
                 "name": "Bessie",
@@ -121,7 +121,7 @@ class LivestockUpdate(BaseModel):
     is_active: Optional[bool] = Field(None, description="Whether animal is active")
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "weight_kg": 465.2,
                 "health_status": "monitoring"
@@ -142,8 +142,8 @@ class LivestockResponse(LivestockBase):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "external_id": "COW-001",
@@ -176,7 +176,7 @@ class AnimalCollarCreate(BaseModel):
     transmission_interval_seconds: int = Field(300, description="Data transmission interval in seconds", ge=60, le=86400)
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "device_id": "COLLAR-ABC123",
                 "sensor_type_id": "123e4567-e89b-12d3-a456-426614174000",
@@ -207,7 +207,7 @@ class AnimalCollarResponse(BaseModel):
     installed_at: datetime = Field(..., description="Installation timestamp")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Telemetry Data Schemas
@@ -229,7 +229,7 @@ class TelemetryDataCreate(BaseModel):
         return v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "device_id": "COLLAR-ABC123",
                 "timestamp": "2024-01-01T12:00:00Z",
@@ -259,7 +259,7 @@ class TelemetryDataResponse(BaseModel):
     is_anomaly: bool = Field(..., description="Whether data is flagged as anomaly")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Location and Health Schemas
@@ -272,7 +272,7 @@ class LivestockLocationUpdate(BaseModel):
     accuracy_meters: Optional[float] = Field(None, description="GPS accuracy in meters", ge=0)
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "latitude": 59.9139,
                 "longitude": 10.7522,
@@ -293,7 +293,7 @@ class LivestockHealthMetrics(BaseModel):
     eating_time: Optional[int] = Field(None, description="Eating time in minutes", ge=0)
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "heart_rate": 72,
                 "body_temperature": 38.5,
@@ -335,7 +335,7 @@ class VirtualFenceCreate(BaseModel):
         return v
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "name": "North Pasture",
                 "description": "Main grazing area for cattle",
@@ -381,7 +381,7 @@ class VirtualFenceResponse(BaseModel):
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Fence Violation Schemas
@@ -402,7 +402,7 @@ class FenceViolationResponse(BaseModel):
     resolved_at: Optional[datetime] = Field(None, description="Resolution timestamp")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 # Health Alert Schemas
@@ -422,8 +422,8 @@ class HealthAlertResponse(BaseModel):
     resolved_at: Optional[datetime] = Field(None, description="Resolution timestamp")
 
     class Config:
-        orm_mode = True
-        schema_extra = {
+        from_attributes = True
+        json_schema_extra = {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "entity_id": "456e7890-e89b-12d3-a456-426614174000",
