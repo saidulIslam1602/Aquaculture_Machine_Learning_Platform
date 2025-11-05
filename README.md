@@ -1,10 +1,10 @@
-# 🐟 Aquaculture ML Platform
+# Agricultural IoT Platform
 
-A production-grade machine learning platform for real-time fish classification and health monitoring in aquaculture environments.
+A production-grade machine learning platform for real-time monitoring and analytics across multiple agricultural domains including aquaculture fish farming and livestock management.
 
-## 🎯 Project Focus: Data Engineering & Infrastructure
+## Project Focus: Data Engineering & Infrastructure
 
-This project demonstrates **production-grade data engineering and platform infrastructure** for ML deployment at scale - the core skills required for a Senior ML/Data Engineer role.
+This project demonstrates **production-grade data engineering and platform infrastructure** for agricultural IoT deployment at scale, showcasing modern data stack tools including TimescaleDB, dbt, and BigQuery integration for time-series agricultural sensor data processing.
 
 ### What's Implemented (Production-Ready) ✅
 
@@ -14,12 +14,14 @@ This project demonstrates **production-grade data engineering and platform infra
 - Terraform infrastructure as code for AWS (EKS, RDS, MSK, S3)
 - NGINX ingress with TLS termination and rate limiting
 
-**Data Engineering:**
+**Modern Data Stack & Time-Series:**
+- TimescaleDB for high-performance time-series data storage
+- dbt for data transformation and modeling (staging, marts, tests)
+- BigQuery integration for analytics and reporting
 - Real-time streaming with Kafka and consumer groups
 - Distributed task processing with Celery workers
-- PostgreSQL with optimized schema, indexes, and migrations
 - Redis for caching and distributed rate limiting
-- Data pipeline architecture ready for ETL workflows
+- Automated data quality checks and monitoring
 
 **API & Security:**
 - FastAPI with JWT authentication and RBAC
@@ -62,11 +64,21 @@ The following components are structured and ready for ML model deployment:
 
 ## 🎯 Features
 
-- **Real-time Fish Classification**: Process underwater camera feeds with low latency
+### Agricultural IoT Monitoring
+- **Livestock Management**: Real-time animal tracking with collar sensors
+- **Virtual Fencing**: Automated boundary monitoring and violation alerts
+- **Health Analytics**: AI-powered animal health scoring and anomaly detection
+- **Aquaculture Monitoring**: Fish classification and tank environment monitoring
+
+### Modern Data Platform
+- **Time-Series Processing**: TimescaleDB with automated compression and retention
+- **Data Transformation**: dbt models for staging, marts, and business logic
+- **Analytics Warehouse**: BigQuery integration for advanced analytics
+- **Real-Time Streaming**: Kafka-based event processing and data pipelines
+
+### Production Infrastructure
 - **Scalable Architecture**: Kubernetes-based microservices that scale horizontally
 - **Production-Ready API**: FastAPI with JWT authentication, rate limiting, and monitoring
-- **Data Pipeline**: Apache Kafka for streaming, PostgreSQL for storage
-- **ML Operations**: Model versioning, A/B testing, performance monitoring
 - **Observability**: Prometheus metrics, Grafana dashboards, distributed tracing
 - **CI/CD**: Automated testing, building, and deployment
 
@@ -88,9 +100,16 @@ The following components are structured and ready for ML model deployment:
                     │
         ┌───────────┼───────────┐
         │           │           │
-   ┌────▼────┐ ┌───▼────┐ ┌───▼────┐
-   │PostgreSQL│ │ Redis  │ │ Kafka  │
-   └─────────┘ └────────┘ └────────┘
+   ┌────▼─────┐ ┌──▼────┐ ┌───▼────┐
+   │TimescaleDB│ │ Redis │ │ Kafka  │
+   │(Time-Series│ │(Cache)│ │(Stream)│
+   │ + PostGIS) │ └───────┘ └────────┘
+   └────┬──────┘
+        │
+   ┌────▼─────┐     ┌──────────┐
+   │   dbt    │────▶│ BigQuery │
+   │(Transform)│     │(Analytics)│
+   └──────────┘     └──────────┘
 ```
 
 ## 🚀 Quick Start
@@ -107,7 +126,7 @@ The following components are structured and ready for ML model deployment:
 1. **Clone and setup**:
 ```bash
 git clone <your-repo>
-cd aquaculture-ml-platform
+cd agricultural-iot-platform
 cp .env.example .env
 ```
 
@@ -116,16 +135,29 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-3. **Check service health**:
+3. **Initialize TimescaleDB and run dbt models**:
 ```bash
-curl http://localhost:8000/health
+# Wait for TimescaleDB to be ready
+docker-compose exec timescaledb psql -U agricultural_iot -d agricultural_iot_db -c "SELECT version();"
+
+# Run dbt models
+cd dbt
+dbt run --profiles-dir .
+dbt test --profiles-dir .
 ```
 
-4. **Access services**:
+4. **Check service health**:
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/api/v1/livestock/animals?farm_id=DEMO-FARM
+```
+
+5. **Access services**:
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 - Grafana: http://localhost:3000 (admin/admin)
 - Prometheus: http://localhost:9090
+- TimescaleDB: localhost:5432 (agricultural_iot/agricultural_iot123)
 
 ### Development Setup
 
