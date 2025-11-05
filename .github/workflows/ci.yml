@@ -481,6 +481,16 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
       
+      - name: Install Docker Compose
+        run: |
+          # Install Docker Compose V1 as fallback for older scripts
+          sudo curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+          docker-compose --version || echo "Docker Compose V1 installation failed, using V2"
+          
+          # Verify Docker Compose V2 is available
+          docker compose version || echo "Docker Compose V2 not available"
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -557,7 +567,18 @@ jobs:
           
       - name: Cleanup
         if: always()
-        run: docker-compose down -v
+        continue-on-error: true
+        run: |
+          # Try modern Docker Compose V2 first, then fallback to V1
+          docker compose down -v 2>/dev/null || docker-compose down -v 2>/dev/null || echo "No docker-compose services to clean up"
+          
+          # Clean up any remaining containers and networks
+          docker container prune -f || true
+          docker network prune -f || true
+          docker volume prune -f || true
+          
+          # Kill any processes using port 8000 (mock server)
+          sudo lsof -ti:8000 | xargs -r sudo kill -9 || true
 
   # Deploy to Staging
   deploy-staging:
