@@ -339,6 +339,32 @@ Automated alerting is configured for:
 - Security incidents
 - Resource utilization thresholds
 
+## Deployment
+
+The platform supports automated deployment to staging and production environments through GitHub Actions.
+
+### Deployment Modes
+
+- **Simulation Mode**: Default mode when Kubernetes secrets are not configured
+- **Real Deployment Mode**: Activated when proper kubeconfig secrets are provided
+
+### Setting Up Real Deployments
+
+To enable actual Kubernetes deployments instead of simulations:
+
+1. Configure your Kubernetes clusters (staging and production)
+2. Set up the required GitHub secrets:
+   - `KUBE_CONFIG_STAGING`: Base64-encoded kubeconfig for staging
+   - `KUBE_CONFIG_PRODUCTION`: Base64-encoded kubeconfig for production
+   - `SLACK_WEBHOOK_URL`: Optional Slack notifications
+
+For detailed setup instructions, see [Deployment Secrets Setup Guide](docs/DEPLOYMENT_SECRETS_SETUP.md).
+
+### Deployment Strategy
+
+- **Staging**: Rolling updates triggered on `develop` branch
+- **Production**: Blue-Green deployment triggered on `main` branch
+
 ## Contributing
 
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
