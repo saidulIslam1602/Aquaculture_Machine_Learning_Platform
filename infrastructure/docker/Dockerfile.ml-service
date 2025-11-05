@@ -1,5 +1,5 @@
 # Multi-stage build for ML service
-FROM python:3.10-slim as builder
+FROM python:3.10-slim AS builder
 
 WORKDIR /app
 
@@ -10,11 +10,22 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements-docker.txt requirements.txt
+# Copy requirements files
+COPY requirements-docker.txt ./requirements-docker.txt
+COPY requirements.txt ./requirements-full.txt
+
+# Install Python dependencies with comprehensive fallback
 RUN pip install --upgrade pip && \
-    pip install --no-cache-dir --user -r requirements.txt || \
-    (echo "Retrying with basic dependencies..." && \
-     pip install --no-cache-dir --user fastapi uvicorn sqlalchemy psycopg2-binary)
+    (pip install --no-cache-dir --user -r requirements-docker.txt || \
+     pip install --no-cache-dir --user -r requirements-full.txt || \
+     pip install --no-cache-dir --user \
+       fastapi==0.104.1 \
+       uvicorn==0.24.0 \
+       sqlalchemy==2.0.23 \
+       psycopg2-binary==2.9.9 \
+       pydantic==2.5.0 \
+       python-multipart==0.0.6 \
+       httpx==0.25.2)
 
 # Final stage
 FROM python:3.10-slim
@@ -32,8 +43,11 @@ COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 
 # Copy application code
-COPY services/ml-service /app/services/ml-service
 COPY services/__init__.py /app/services/__init__.py
+COPY services/ml-service /app/services/ml-service
+
+# Verify files were copied
+RUN ls -la /app/services/ && ls -la /app/services/ml-service/
 
 # Create directories
 RUN mkdir -p /app/models /app/data
