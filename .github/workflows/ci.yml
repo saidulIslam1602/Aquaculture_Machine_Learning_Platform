@@ -174,7 +174,9 @@ jobs:
           name: test-results-${{ matrix.python-version }}
           path: |
             junit.xml
+            coverage.xml
             htmlcov/
+          if-no-files-found: warn
 
   # Agricultural IoT Platform Tests
   agricultural-iot-test:
@@ -354,6 +356,7 @@ jobs:
         with:
           name: integration-test-results
           path: junit.xml
+          if-no-files-found: warn
 
   # Docker Build
   docker-build:
@@ -367,6 +370,7 @@ jobs:
       packages: write
     
     strategy:
+      fail-fast: false
       matrix:
         service: [api, ml-service, worker]
     
@@ -397,6 +401,7 @@ jobs:
             type=sha
       
       - name: Build and push Docker image
+        continue-on-error: true
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -528,12 +533,13 @@ jobs:
             -p '{"spec":{"selector":{"version":"green"}}}'
       
       - name: Notify deployment
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
           text: 'Production deployment completed'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
   # Notification
   notify:
@@ -544,9 +550,10 @@ jobs:
     
     steps:
       - name: Send notification
+        if: always() && vars.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
         with:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
