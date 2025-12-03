@@ -110,10 +110,7 @@ class AgriculturalBatchProcessor:
         self.logger = logging.getLogger(__name__)
         self.app_name = app_name
         
-        # Initialize Spark session with Delta Lake
-        self.spark = self._create_spark_session()
-        
-        # Configuration
+        # Configuration (initialized before Spark session to make it available)
         self.config = {
             "batch_size": 100000,
             "partition_columns": ["farm_id", "date"],
@@ -122,6 +119,9 @@ class AgriculturalBatchProcessor:
             "max_records_per_file": 1000000,
             "shuffle_partitions": 200
         }
+        
+        # Initialize Spark session with Delta Lake
+        self.spark = self._create_spark_session()
         
         # Schema definitions
         self.schemas = self._define_schemas()
@@ -141,7 +141,8 @@ class AgriculturalBatchProcessor:
                 .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
                 .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") \
                 .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
-                .config("spark.sql.execution.arrow.maxRecordsPerBatch", "10000")
+                .config("spark.sql.execution.arrow.maxRecordsPerBatch", "10000") \
+                .config("spark.sql.shuffle.partitions", str(self.config["shuffle_partitions"]))
             
             # Configure Delta Lake
             spark = configure_spark_with_delta_pip(builder).getOrCreate()
@@ -223,7 +224,7 @@ class AgriculturalBatchProcessor:
                 "password": "agricultural_iot123",
                 "driver": "org.postgresql.Driver",
                 "fetchsize": "10000",
-                "batchsize": "10000"
+                "batchsize": str(self.config["batch_size"])
             }
             
             # Construct query with date filtering
@@ -755,7 +756,8 @@ class AgriculturalBatchProcessor:
                 .format("delta") \
                 .mode("overwrite") \
                 .option("mergeSchema", "true") \
-                .option("overwriteSchema", "true")
+                .option("overwriteSchema", "true") \
+                .option("maxRecordsPerFile", self.config["max_records_per_file"])
             
             if partition_cols:
                 writer = writer.partitionBy(*partition_cols)
